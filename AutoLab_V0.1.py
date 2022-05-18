@@ -12,11 +12,12 @@ Measurements scripts written in python.
 These inherit the instrument objects from the main program
 
 Task:
-    - create foundation
-    - github
-    - test/dummy instrument
-    - get test multiprocessing working
-    - Implement setup file to autoload instruments and settings (Git ignore this)
+    - More documentation
+    - More Comments
+    - Add missing error handling
+    - Add Utility for magnet, lockin controls
+    - Arroyo driver and also utility controls
+    - Make Resource manager fully multiprocessing compatible
 
 """
 
@@ -395,8 +396,6 @@ class Window(tk.Frame):
             print("Failed to create file")
             return
         
-        Que = self.DataStream
-        
         try:
             
             if self.MeasHandler.Start(self.DataStream):
@@ -457,7 +456,6 @@ class Window(tk.Frame):
             self.MeasHandler.Worker.join(timeout=0.1)
             Alive = self.MeasHandler.Worker.is_alive()
             if not Alive:
-                self.MeasureFinished()
                 return True
             else:
                 return False
@@ -593,7 +591,7 @@ class ResourcesObj(object):
     """
     This handles all the communication for the instruments and external resources.
     Better to have one singular object as serial ports and comms don't like multiple
-    callers
+    callers.
     """
     def __init__(self):
         """
