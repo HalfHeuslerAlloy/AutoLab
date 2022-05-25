@@ -21,6 +21,8 @@ import pyvisa
 
 import Instruments as Inst
 
+from pymeasure.instruments.keithley import Keithley2400
+
 class Handler(tk.Frame):
     """
     Measurement worker of the main AutoLab window
@@ -103,41 +105,47 @@ class Handler(tk.Frame):
         
 def Worker(Que,Str,Stp,Steps,Dwl):
     
-    rm = pyvisa.ResourceManager()
-    
     try:
-        Keithley = Inst.Keithley2400(rm,13)
+        Keithley = Keithley2400("GPIB::13")
     except:
         Que.put("Esc")
         return
+    
+    Keithley.reset()
+    Keithley.measure_resistance()
+    Keithley.apply_voltage()
+    time.sleep(0.1)
+    Keithley.enable_source()
     
     #column headers
     Que.put("V    I    R\n")
  
     for V in np.linspace(Str,Stp,Steps):
         
-        Keithley.setV(V)
+        Keithley.source_voltage = V
         
         time.sleep(Dwl)
         
-        values = Keithley.readAll()
+        #voltage,current, and resistance
+        values = Keithley.means
         
         Que.put([values[0],values[1],values[2]])
 
     
     for V in np.linspace(Stp,Str,Steps):
         
-        Keithley.setV(V)
+        Keithley.source_voltage = V
         
         time.sleep(Dwl)
         
-        values = Keithley.readAll()
+        #voltage,current, and resistance
+        values = Keithley.means
         
         Que.put([values[0],values[1],values[2]])
     
-    Keithley.setV(0)
+    Keithley.source_voltage = 0
     
-    Keithley.close()
+    Keithley.shutdown()
     
     Que.put("Esc")
 

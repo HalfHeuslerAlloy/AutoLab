@@ -57,6 +57,9 @@ class Handler(tk.Frame):
 
         
     def Start(self,Que):
+        """
+        Start the worker doing the measurement
+        """
         
         # get values from entry windows
         Str  = float(self.StartEntry.get())
@@ -77,8 +80,8 @@ class Handler(tk.Frame):
         
         try:
             
-            self.Measure = Process(target=Worker, args=(Que,Str,Stp,Rate,Dwl))
-            self.Measure.start()
+            self.Worker = Process(target=Worker, args=(Que,Str,Stp,Rate,Dwl))
+            self.Worker.start()
             
         except Exception as e:
             print(e)

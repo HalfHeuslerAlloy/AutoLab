@@ -16,7 +16,7 @@ Task:
     - More Comments
     - Add missing error handling
     - Add Utility for magnet, lockin controls
-    - Arroyo driver and also utility controls
+    - Arroyo driver and also utility control
     - Make Resource manager fully multiprocessing compatible
 
 """
@@ -46,7 +46,6 @@ import pyvisa
 import Instruments
 
 import Workers
-
 
 class Window(tk.Frame):
     """
@@ -320,7 +319,7 @@ class Window(tk.Frame):
         FileUtilTab = tk.Frame(self.UtilTabs)
         self.UtilTabs.add(FileUtilTab,text="Save Settings")
         
-        #TODO - Mkae this an either/or option
+        #TODO - Make this an either/or option
         self.OverrideFile = tk.IntVar()
         OverrideFile = tk.Checkbutton(FileUtilTab,text="Override",variable=self.OverrideFile)
         OverrideFile.pack()
@@ -365,7 +364,6 @@ class Window(tk.Frame):
             return
         
         #Load GUI and worker from filename
-        #TODO maybe don't use this method, change to a safer method
         #self.MeasWorkerScript = __import__(filename, fromlist=[''])
         
         self.MeasWorkerScript = getattr(Workers, module)
@@ -505,6 +503,9 @@ class Window(tk.Frame):
     def CreateFile(self):
         """
         Creates and opens file with filename inputted
+        
+        TODO:
+            - Change this to ask if you want to overide file if trying to.
         """
         
         filename = self.filenameInput.get()
@@ -530,7 +531,7 @@ class Window(tk.Frame):
             self.file.seek(0)
             self.file.truncate()
         else:
-            
+            #Check if file exist before
             fileExist = os.path.isfile(filename)
             
             if (AutoEnum==False) & (fileExist==True):
@@ -538,6 +539,7 @@ class Window(tk.Frame):
                 print("Not sure what you expected me to do about it!")
                 #Return False for failed file creation,
                 # TODO change this to error handling
+                # TODO create dialog box to ask to overide current file
                 return False
             
             elif (AutoEnum==False) & (fileExist==False):
