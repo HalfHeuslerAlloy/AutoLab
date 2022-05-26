@@ -469,7 +469,12 @@ class Window(tk.Frame):
         
         print("Measurement finished")
         
-        self.MeasHandler.Worker.join()
+        try:
+            self.MeasHandler.Worker.join()
+            self.MeasHandler.Stop()
+        except Exception as e:
+            print("Could not close worker")
+            print(e)
         self.MeasureActive = False
         self.CloseSaveFile()
         

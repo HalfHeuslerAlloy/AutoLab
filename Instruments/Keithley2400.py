@@ -59,7 +59,7 @@ class Keithley2400(object):
         self.inst.write(":SOUR:VOLT:RANGE "+vRange)        
         
     def sense(self,function):
-        # current or voltage
+        # CURRent , VOLTage or RESistance
         self.inst.write(":SENS:FUNC "+function)        
 
     def setVcomp(self,compliance):

@@ -54,6 +54,12 @@ class Handler(tk.Frame):
         self.DwellEntry = tk.Entry(master,width = 10)
         self.DwellEntry.insert(tk.END,"0.1")
         self.DwellEntry.pack()
+        
+        GBIPLabel = tk.Label(master,text="Keithley GBIP")
+        GBIPLabel.pack()
+        self.GBIP = tk.Entry(master,width = 10)
+        self.GBIP.insert(tk.END,"13")
+        self.GBIP.pack()
 
         
     def Start(self,Que):
@@ -63,22 +69,24 @@ class Handler(tk.Frame):
         Stp  = float(self.StopEntry.get() )
         Steps = float(self.StepsEntry.get())
         Dwl  = float(self.DwellEntry.get())
-        
+        GBIPAddress = int(self.GBIP.get())
         
         #Connect to and setup Keithley
+        rm = pyvisa.ResourceManager()
+        
         try:
-            #TODO add communication test
-            #Keithley = self.Resources.insts["Keithley1"]
-            #Keithley.setV(0)
-            pass
-        except Exception as e:
-            print(e)
-            print("failed to find or communicate with keithley")
-            return False
+            Keithley = Inst.Keithley2400(rm,GBIPAddress)
+            Keithley.sense("CURR") #set keithley to measure CURRent
+            Keithley.setV(0)
+            Keithley.outputOn()
+    
+            Keithley.close()
+        except:
+            print("Failed to connect to Keithley during shutdown sequence")
         
         try:
             
-            self.Worker = Process(target=Worker, args=(Que,Str,Stp,Steps,Dwl))
+            self.Worker = Process(target=Worker, args=(Que,Str,Stp,Steps,Dwl,GBIPAddress))
             self.Worker.start()
             
         except Exception as e:
@@ -91,22 +99,41 @@ class Handler(tk.Frame):
     def Stop(self):
         """
         Abort the current measurement as gracefully as possible
+        Put any instruments into a safe state
+        
+        This is also called if program already has finished
         """
         try:
             self.Measure.terminate()
         except:
             print("Failed to stop process")
             return False
+        
+        
+        GBIPAddress = int(self.GBIP.get())
+        
+        #Make safe
+        rm = pyvisa.ResourceManager()
+    
+        try:
+            Keithley = Inst.Keithley2400(rm,GBIPAddress)
+            
+            Keithley.setV(0)
+            Keithley.outputOff()
+    
+            Keithley.close()
+        except:
+            print("Failed to connect to Keithley during shutdown sequence")
        
         return True
 
         
-def Worker(Que,Str,Stp,Steps,Dwl):
+def Worker(Que,Str,Stp,Steps,Dwl,GBIPAddress):
     
     rm = pyvisa.ResourceManager()
     
     try:
-        Keithley = Inst.Keithley2400(rm,13)
+        Keithley = Inst.Keithley2400(rm,GBIPAddress)
     except:
         Que.put("Esc")
         return
