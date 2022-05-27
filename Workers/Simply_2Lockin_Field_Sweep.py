@@ -118,6 +118,7 @@ def Worker(Que,Str,Stp,Rate,Dwl):
     #column headers
     Que.put("B    Rxx_X    Rxy_X    Rxx_Y    Rxy_Y")
     
+    #Test if Magnet switch heater is on
     Mag.ExamineStatus()
     
     if Mag.is_SwitchHeaterOn:
@@ -130,13 +131,12 @@ def Worker(Que,Str,Stp,Rate,Dwl):
     #Go to start position
     Mag.set_SetPoint(Str)
     Mag.set_RampRate(Rate)
-    
     Mag.sweep_SetPoint()
     
     Mag.ExamineStatus()
     #Wait until reached start position
     while(Mag.Ramping):
-        time.sleep(Dwl)
+        time.sleep(1)
         Mag.ExamineStatus()
     
     

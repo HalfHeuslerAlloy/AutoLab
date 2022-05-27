@@ -18,7 +18,7 @@ Task:
     - Add Utility for magnet, lockin controls
     - Arroyo driver and also utility control
     - Make Resource manager fully multiprocessing compatible
-
+    - Add more graph settings in utility tab
 """
 
 import tkinter as tk
@@ -141,7 +141,7 @@ class Window(tk.Frame):
                                          font=tkFont.Font(size=30)
                                          )
         
-        self.RunWorkerButton.grid(column=0, row=0,padx=50)
+        self.RunWorkerButton.grid(column=0, row=0,padx=40)
         
         self.StopWorkerButton = tk.Button(self.RunFrame,
                                          text = "Stop",
@@ -150,7 +150,20 @@ class Window(tk.Frame):
                                          font=tkFont.Font(size=30)
                                          )
         
-        self.StopWorkerButton.grid(column=2, row=0,padx=50)
+        self.StopWorkerButton.grid(column=1, row=0,padx=40)
+        
+        self.Icons = {}
+        
+        self.Icons["IDLE"] = tk.PhotoImage(file=r"Icons\Indicator_IDLE_small.png")
+        self.Icons["ACTIVE"] = tk.PhotoImage(file=r"Icons\Indicator_ACTIVE_small.png")
+        self.Icons["ACTIVE_DARK"] = tk.PhotoImage(file=r"Icons\Indicator_ACTIVE_DARK_small.png")
+        self.Icons["ERROR"] = tk.PhotoImage(file=r"Icons\Indicator_ERROR_small.png")
+        
+        self.IndicatorLabel = tk.Label(self.RunFrame)
+        self.IndicatorLabel["image"] = self.Icons["IDLE"]
+        self.IndicatorLabel.grid(column=2, row=0)
+        
+        self.IndicatorFlashState = 0
         
         #self.UtilLabel = tk.Label(self.UtilFrame,text="Utilities")
         #self.UtilLabel.pack(side="top")
@@ -197,12 +210,29 @@ class Window(tk.Frame):
         #self.y2Data.append(2 * np.cos(2 * np.pi * self.xData[-1]))
         
         if self.MeasureActive:
+            # Update measurement stuff
+            
+            # flash the active icon
+            FlashCycles = 4 # Number of cycles to switch flash on
+            
+            if self.IndicatorFlashState<FlashCycles:
+                self.IndicatorLabel["image"] = self.Icons["ACTIVE"]
+            else:
+                self.IndicatorLabel["image"] = self.Icons["ACTIVE_DARK"]
+
+            self.IndicatorFlashState += 1
+            if self.IndicatorFlashState>FlashCycles*2:
+                self.IndicatorFlashState = 0
+                
+            
+            
+            # Get data from the worker by reading the que
             self.GetData()
             Finished = self.CheckMeasureFinished()
-            #print("Has measurement finished: {}".format(Finished))
             if Finished:
                 print("Measurement finished with exitcode {}".format(self.MeasHandler.Worker.exitcode))
-        
+        else:
+            self.IndicatorLabel["image"] = self.Icons["IDLE"]
         
         self.UpdateGraph()
         
@@ -316,6 +346,8 @@ class Window(tk.Frame):
     #########################################
     
     def CreateFileUtilTab(self):
+        """Creates the utilities tab for controlling how the file should be saved
+        """
         FileUtilTab = tk.Frame(self.UtilTabs)
         self.UtilTabs.add(FileUtilTab,text="Save Settings")
         
@@ -332,7 +364,8 @@ class Window(tk.Frame):
     ########################################
     
     def CreateMeasTab(self):
-        
+        """Simply generates the measurement tab and add pages to it
+        """
         self.MeasWorkerFrame = tk.Frame(self.MeasTabs)
         self.MeasTabs.add(self.MeasWorkerFrame,text="Main Script")
     
@@ -356,7 +389,7 @@ class Window(tk.Frame):
         self.WorkerFrame.grid(column=0, row=1, columnspan=3, rowspan=3)
         
         #Get filename of Expirement GUI and worker
-        filename = fd.askopenfile()
+        filename = fd.askopenfile(initialdir = os.getcwd()+"\\Workers")
         filename = filename.name[( len(os.getcwd())+1 ):-3]
         filename = filename.replace("/",".")
         module = filename.split(".")[1]
@@ -394,8 +427,9 @@ class Window(tk.Frame):
             print("Failed to create file")
             return
         
+        
+        # try to start the measure, raise error if it failed
         try:
-            
             if self.MeasHandler.Start(self.DataStream):
                 print("Measurement Started")
             else:
