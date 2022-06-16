@@ -173,7 +173,7 @@ class Window(tk.Frame):
         
         self.CreateFileUtilTab()
         
-
+        
         
         self.filenameInput = tk.Entry(self.fileSysFrame,width = 80)
         self.filenameInput.grid(column=0,row=1)
@@ -201,7 +201,6 @@ class Window(tk.Frame):
     def UpdateWindow(self):
         """
         This is the general window that updates anything that needs updating.
-        now sort when the current run time will be
         Avoid running long process here, must be quick as possible
         """
         
@@ -244,7 +243,7 @@ class Window(tk.Frame):
     
     def menuFrameSetup(self):
         """
-        Setup menu options
+        Setup menu options at the top of the window. add extra functionality here.
         """
         
         menuFrame = tk.Frame()
@@ -299,10 +298,14 @@ class Window(tk.Frame):
         Create a matplotlib figure inside the graphing frame for ploting data
         """
         
-        self.xData = np.arange(0, 3, .01)
-        self.y1Data = list(2 * np.sin(2 * np.pi * self.xData))
-        self.y2Data = list(2 * np.cos(2 * np.pi * self.xData))
-        self.xData = list(self.xData)
+#        self.xData = np.arange(0, 3, .01)
+#        self.y1Data = list(2 * np.sin(2 * np.pi * self.xData))
+#        self.y2Data = list(2 * np.cos(2 * np.pi * self.xData))
+#        self.xData = list(self.xData)
+        
+        self.xData = []
+        self.y1Data = []
+        self.y2Data
         
         self.fig = Figure(figsize=(width, Height), dpi=100)
         self.fig.set_facecolor("white")
@@ -382,7 +385,6 @@ class Window(tk.Frame):
             self.WorkerFrame.destroy()
             self.update()   
         except:
-
             pass
         
         self.WorkerFrame = tk.Frame(self.MeasWorkerFrame)
