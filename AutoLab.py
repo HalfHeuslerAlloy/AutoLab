@@ -39,7 +39,7 @@ import os
 import datetime
 import time
 
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Pipe
 
 import pyvisa
 
@@ -61,6 +61,9 @@ class Window(tk.Frame):
         
         #Setup multiprocesing
         self.DataStream = Queue()
+        #generate the pipes for sending and receiving data (Faster thatn Queues)
+        self.PipeRecv, self.PipeSend = Pipe(duplex=True)
+        
         self.Measure = None
         self.MeasureActive = False
         
@@ -305,7 +308,7 @@ class Window(tk.Frame):
         
         self.xData = []
         self.y1Data = []
-        self.y2Data
+        self.y2Data = []
         
         self.fig = Figure(figsize=(width, Height), dpi=100)
         self.fig.set_facecolor("white")
@@ -432,7 +435,7 @@ class Window(tk.Frame):
         
         # try to start the measure, raise error if it failed
         try:
-            if self.MeasHandler.Start(self.DataStream):
+            if self.MeasHandler.Start(self.PipeSend):
                 print("Measurement Started")
             else:
                 raise Exception("Failed to start measurement")
@@ -453,10 +456,12 @@ class Window(tk.Frame):
         
         while(True):
             
-            if self.DataStream.empty():
+            #Check if there is something to recieve in the pipe
+            if not self.PipeRecv.poll():
                 break
             
-            Data = self.DataStream.get()
+            #get data from pipe
+            Data = self.PipeRecv.recv()
             
             if type(Data)!=str:
                 self.xData.append(Data[0])
@@ -519,15 +524,25 @@ class Window(tk.Frame):
         Force stop the measurement
         """
         
+        #Send stop command
+        #Call the stop function in the worker in case it needs to do anything after
+        self.PipeRecv.send("STOP")
         HasStopped = self.MeasHandler.Stop()
         
         if HasStopped:
             print("Measurement stopped succesfully")
             #Dump queue contents
-            while not self.DataStream.empty():
-                Data = self.DataStream.get()
+            print("Dumping contents of Pipes")
+            print("PipeRecv:")
+            while self.PipeRecv.poll():
+                Data = self.PipeRecv.recv()
                 print(Data)
-            print("Queue has been emptied")
+            print("PipeSend:")
+            while self.PipeSend.poll():
+                Data = self.PipeSend.recv()
+                print(Data)
+            
+            print("Boths pipes have been emptied has been emptied")
             
             self.MeasureActive = False
             self.CloseSaveFile()

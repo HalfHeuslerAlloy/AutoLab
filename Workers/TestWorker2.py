@@ -53,7 +53,7 @@ class Handler(tk.Frame):
         self.DwellEntry.pack()
 
         
-    def Start(self,Que):
+    def Start(self,Pipe):
         
         Str  = float(self.StartEntry.get())
         Stp  = float(self.StopEntry.get() )
@@ -62,7 +62,7 @@ class Handler(tk.Frame):
         
         try:
 
-            self.Worker = Process(target=Worker, args=(Que,Str,Stp,Steps,Dwl))
+            self.Worker = Process(target=Worker, args=(Pipe,Str,Stp,Steps,Dwl))
             self.Worker.start()
             
         except Exception as e:
@@ -84,23 +84,29 @@ class Handler(tk.Frame):
         return True
 
         
-def Worker(Que,Str,Stp,Steps,Dwl):
+def Worker(Pipe,Str,Stp,Steps,Dwl):
     
     #column headers
-    Que.put("X    Y1    Y2\n")
+    Pipe.send("X    Y1    Y2\n")
  
     for x in np.linspace(Str,Stp,Steps):
+        
+        #Check for commands from controller
+        if Pipe.poll():
+            Comm = Pipe.recv()
+            if Comm=="STOP":
+                break
         
         X = x
         
         Y1 = np.sin(x)*x**1.2 + np.random.normal()
-        Y2 = np.exp(x)*x**1.2 + np.random.normal()
+        Y2 = np.cos(x)*x**1.2 + np.random.normal()
         
-        Que.put([X,Y1,Y2])
+        Pipe.send([X,Y1,Y2])
 
         time.sleep(Dwl)
     
-    Que.put("Esc")
+    Pipe.send("Esc")
 
 
 

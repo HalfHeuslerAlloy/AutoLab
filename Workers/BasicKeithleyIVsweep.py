@@ -62,7 +62,7 @@ class Handler(tk.Frame):
         self.GBIP.pack()
 
         
-    def Start(self,Que):
+    def Start(self,Pipe):
         
         # get values from entry windows
         Str  = float(self.StartEntry.get())
@@ -86,7 +86,7 @@ class Handler(tk.Frame):
         
         try:
             
-            self.Worker = Process(target=Worker, args=(Que,Str,Stp,Steps,Dwl,GBIPAddress))
+            self.Worker = Process(target=Worker, args=(Pipe,Str,Stp,Steps,Dwl,GBIPAddress))
             self.Worker.start()
             
         except Exception as e:
@@ -128,20 +128,29 @@ class Handler(tk.Frame):
         return True
 
         
-def Worker(Que,Str,Stp,Steps,Dwl,GBIPAddress):
+def Worker(Pipe,Str,Stp,Steps,Dwl,GBIPAddress):
     
     rm = pyvisa.ResourceManager()
+    
+    Abort = False
     
     try:
         Keithley = Inst.Keithley2400(rm,GBIPAddress)
     except:
-        Que.put("Esc")
+        Pipe.send("Esc")
         return
     
     #column headers
-    Que.put("V    I    R\n")
+    Pipe.send("V    I    R\n")
  
     for V in np.linspace(Str,Stp,Steps):
+        
+        if Pipe.poll():
+            Comm = Pipe.recv()
+            if Comm=="STOP":
+                Abort = False
+        if Abort==True:
+            break
         
         Keithley.setV(V)
         
@@ -149,24 +158,31 @@ def Worker(Que,Str,Stp,Steps,Dwl,GBIPAddress):
         
         values = Keithley.readAll()
         
-        Que.put([values[0],values[1],values[2]])
+        Pipe.send([values[0],values[1],values[2]])
 
     
     for V in np.linspace(Stp,Str,Steps):
         
+        if Pipe.poll():
+            Comm = Pipe.recv()
+            if Comm=="STOP":
+                Abort = False
+        if Abort==True:
+            break
+        
         Keithley.setV(V)
         
         time.sleep(Dwl)
         
         values = Keithley.readAll()
         
-        Que.put([values[0],values[1],values[2]])
+        Pipe.send([values[0],values[1],values[2]])
     
     Keithley.setV(0)
     
     Keithley.close()
     
-    Que.put("Esc")
+    Pipe.send("Esc")
 
 
 

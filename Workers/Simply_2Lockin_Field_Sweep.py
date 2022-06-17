@@ -56,7 +56,7 @@ class Handler(tk.Frame):
         self.DwellEntry.pack()
 
         
-    def Start(self,Que):
+    def Start(self,Pipe):
         """
         Start the worker doing the measurement
         """
@@ -80,7 +80,7 @@ class Handler(tk.Frame):
         
         try:
             
-            self.Worker = Process(target=Worker, args=(Que,Str,Stp,Rate,Dwl))
+            self.Worker = Process(target=Worker, args=(Pipe,Str,Stp,Rate,Dwl))
             self.Worker.start()
             
         except Exception as e:
@@ -103,20 +103,22 @@ class Handler(tk.Frame):
         return True
 
         
-def Worker(Que,Str,Stp,Rate,Dwl):
+def Worker(Pipe,Str,Stp,Rate,Dwl):
     
     rm = pyvisa.ResourceManager()
+    
+    Abort = False
     
     try:
         Lockin1 = Inst.DSP_7265(rm,14)
         Lockin2 = Inst.DSP_7280(rm,12)
         Mag = Inst.IPS120(rm,25)
     except:
-        Que.put("Esc")
+        Pipe.send("Esc")
         return
     
     #column headers
-    Que.put("B    Rxx_X    Rxy_X    Rxx_Y    Rxy_Y")
+    Pipe.send("B    Rxx_X    Rxy_X    Rxx_Y    Rxy_Y")
     
     #Test if Magnet switch heater is on
     Mag.ExamineStatus()
@@ -146,12 +148,20 @@ def Worker(Que,Str,Stp,Rate,Dwl):
     
     while(Mag.Ramping):
         
+        #Check for commands from controller
+        if Pipe.poll():
+            Comm = Pipe.recv()
+            if Comm=="STOP":
+                Abort = True
+        if Abort == True:
+            break
+        
         B = Mag.get_B()
         
         Rxx_X,Rxx_Y = Lockin1.XY
         Rxy_X,Rxy_Y = Lockin2.XY
         
-        Que.put([B,Rxx_X,Rxy_X,Rxx_Y,Rxy_Y])
+        Pipe.send([B,Rxx_X,Rxy_X,Rxx_Y,Rxy_Y])
         
         time.sleep(Dwl)
         Mag.ExamineStatus()
@@ -162,17 +172,24 @@ def Worker(Que,Str,Stp,Rate,Dwl):
     
     while(Mag.Ramping):
         
+        if Pipe.poll():
+            Comm = Pipe.recv()
+            if Comm=="STOP":
+                Abort = True
+        if Abort == True:
+            break
+        
         B = Mag.get_B()
         
         Rxx_X,Rxx_Y = Lockin1.XY
         Rxy_X,Rxy_Y = Lockin2.XY
         
-        Que.put([B,Rxx_X,Rxy_X,Rxx_Y,Rxy_Y])
+        Pipe.send([B,Rxx_X,Rxy_X,Rxx_Y,Rxy_Y])
         
         time.sleep(Dwl)
         Mag.ExamineStatus()
     
-    Que.put("Esc")
+    Pipe.send("Esc")
 
 
 

@@ -47,7 +47,7 @@ class Handler(tk.Frame):
         OscEntryLabel = tk.Label(master,text="Oscilloscope GBIP")
         OscEntryLabel.pack()
         self.OscEntry = tk.Entry(master,width = 10)
-        self.OscEntry.insert(tk.END,"17")
+        self.OscEntry.insert(tk.END,"7")
         self.OscEntry.pack()
         
         RateEntryLabel = tk.Label(master,text="Update Rate (s)")
@@ -57,13 +57,13 @@ class Handler(tk.Frame):
         self.RateEntry.pack()
 
         
-    def Start(self,Que):
+    def Start(self,Pipe):
         """
         Start the worker doing the measurement
         """
         
         # get values from entry windows
-        Dwell  = float(self.StartEntry.get())
+        Dwell  = float(self.RateEntry.get())
         
         Keith1_GBIP  = float(self.Keith1Entry.get())
         Keith2_GBIP  = float(self.Keith2Entry.get())
@@ -71,7 +71,7 @@ class Handler(tk.Frame):
         
         try:
             
-            self.Worker = Process(target=Worker, args=(Que,Keith1_GBIP,Keith2_GBIP,Osc_GBIP,Dwell))
+            self.Worker = Process(target=Worker, args=(Pipe,Keith1_GBIP,Keith2_GBIP,Osc_GBIP,Dwell))
             self.Worker.start()
             
         except Exception as e:
@@ -94,30 +94,42 @@ class Handler(tk.Frame):
         return True
 
         
-def Worker(Que,Keith1_GBIP,Keith2_GBIP,Osc_GBIP,Dwell):
+def Worker(Pipe,Keith1_GBIP,Keith2_GBIP,Osc_GBIP,Dwell):
     
     rm = pyvisa.ResourceManager()
     
+    Abort = False
+    
     try:
-        Keith1 = Inst.Keithley2400(rm,Keith1_GBIP)
-        Keith2 = Inst.Keithley2400(rm,Keith2_GBIP)
-        Osc = rm.open_resource(Osc_GBIP)
+        Keith1 = Inst.Keithley2400(rm,int(Keith1_GBIP))
+        Keith2 = Inst.Keithley2400(rm,int(Keith2_GBIP))
+        Osc = rm.open_resource('GPIB0::'+str(int(Osc_GBIP))+'::INSTR')
         Osc.write_termination = Osc.CR
         Osc.read_termination = Osc.CR
-    except:
+    except Exception as e:
+        print(e)
+        print('GPIB0::'+str(int(Osc_GBIP))+'::INSTR')
+        Pipe.send(str(e))
         try:
-            Keith1.close()
-            Keith2.close()
+            Keith1.__del__()
+            Keith2.__del__()
             Osc.close()
         except:
             pass
-        Que.put("Esc")
+        Pipe.send("Esc")
         return
     
     #column headers
-    Que.put("Time    Gate1(Ohm)    Gate2(Ohm)    SpikeCh1(V)    SpikeCh2(V)")
+    Pipe.send("Time    Gate1(Ohm)    Gate2(Ohm)    SpikeCh1(V)    SpikeCh2(V)")
     
-    while(True):
+    while(Abort==False):
+        
+        if Pipe.poll():
+            Comm = Pipe.recv()
+            if Comm=="STOP":
+                Abort==True
+        if Abort==True:
+            break
         
         Data = []
         
@@ -148,9 +160,18 @@ def Worker(Que,Keith1_GBIP,Keith2_GBIP,Osc_GBIP,Dwell):
         
         Osc.write(":RUN")
         
+        #Send data to main controller
+        Pipe.send(Data)
+        
         time.sleep(Dwell)
     
-    Que.put("Esc")
+    
+    #Stop
+    Keith1.__del__()
+    Keith2.__del__()
+    Osc.close()
+    
+    Pipe.send("Esc")
 
 
 

@@ -8,9 +8,6 @@ class Keithley2400(object):
         super(Keithley2400,self).__init__()
         self.inst = rm.open_resource('GPIB0::'+str(channel)+'::INSTR')
         #self.inst.write("*RST")
-        self.inst.write(":OUTP ON;")
-        self.inst.write(":sens:func:conc off;:sour:func volt;")
-        self.inst.write(":sens:func 'curr:dc';")
     
     def __del__(self):
         self.inst.close()
