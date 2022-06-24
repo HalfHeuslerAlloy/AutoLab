@@ -40,7 +40,7 @@ class Handler(tk.Frame):
         StopEntryLabel = tk.Label(master,text="Stop (T)")
         StopEntryLabel.pack()
         self.StopEntry = tk.Entry(master,width = 10)
-        self.StopEntry.insert(tk.END,"0.5")
+        self.StopEntry.insert(tk.END,"0.2")
         self.StopEntry.pack()
         
         RateEntryLabel = tk.Label(master,text="Sweep Rate (T/min)")
@@ -78,6 +78,9 @@ class Handler(tk.Frame):
             print("Parameters out of bounds")
             return False
         
+        print("Field will start at {0}T and peak at at {1}T".format(Str,Stp))
+        print("Estimated time is {}mins".format( 2*abs(Stp-Str)/Rate ) )
+        
         try:
             
             self.Worker = Process(target=Worker, args=(Pipe,Str,Stp,Rate,Dwl))
@@ -96,6 +99,7 @@ class Handler(tk.Frame):
         """
         try:
             self.Measure.terminate()
+            self.Measure.join()
         except:
             print("Failed to stop process")
             return False
@@ -113,15 +117,18 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
         Lockin1 = Inst.DSP_7265(rm,14)
         Lockin2 = Inst.DSP_7280(rm,12)
         Mag = Inst.IPS120(rm,25)
-    except:
+    except Exception as e:
+        print(e)
         Pipe.send("Esc")
         return
     
     #column headers
-    Pipe.send("B    Rxx_X    Rxy_X    Rxx_Y    Rxy_Y")
+    Pipe.send("B    Rxx_X    Rxx_Y    Rxy_X    Rxy_Y")
     
+
     #Test if Magnet switch heater is on
     Mag.ExamineStatus()
+
     
     if Mag.is_SwitchHeaterOn:
         pass
@@ -129,22 +136,36 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
         Mag.SwitchHeaterOn()
         time.sleep(60)
     
-    
+    print("Sweeping Magnet to start")
     #Go to start position
     Mag.set_SetPoint(Str)
-    Mag.set_RampRate(Rate)
+    time.sleep(0.1)
+    Mag.set_FieldRate(Rate)
+    time.sleep(0.1)
     Mag.sweep_SetPoint()
+    time.sleep(0.1)
     
     Mag.ExamineStatus()
+    time.sleep(0.1)
     #Wait until reached start position
     while(Mag.Ramping):
+        #Check for commands from controller
+        if Pipe.poll():
+            Comm = Pipe.recv()
+            if Comm=="STOP":
+                Abort = True
+        if Abort == True:
+            break
         time.sleep(1)
         Mag.ExamineStatus()
     
-    
+    print("Sweeping Magnet to stop")
     #Ramp to stop field
     Mag.set_SetPoint(Stp)
+    time.sleep(0.1)
     Mag.sweep_SetPoint()
+    time.sleep(0.1)
+    Mag.ExamineStatus()
     
     while(Mag.Ramping):
         
@@ -156,20 +177,24 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
         if Abort == True:
             break
         
-        B = Mag.get_B()
-        
         Rxx_X,Rxx_Y = Lockin1.XY
         Rxy_X,Rxy_Y = Lockin2.XY
         
-        Pipe.send([B,Rxx_X,Rxy_X,Rxx_Y,Rxy_Y])
+        B = Mag.get_B()
+        
+        Pipe.send([B,Rxx_X,Rxx_Y,Rxy_X,Rxy_Y])
         
         time.sleep(Dwl)
         Mag.ExamineStatus()
-    
+
+    print("Sweeping Magnet to start again")
     #Ramp to start field
     Mag.set_SetPoint(Str)
+    time.sleep(0.1)
     Mag.sweep_SetPoint()
+    time.sleep(0.1)
     
+    Mag.ExamineStatus()
     while(Mag.Ramping):
         
         if Pipe.poll():
@@ -179,10 +204,10 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
         if Abort == True:
             break
         
-        B = Mag.get_B()
-        
         Rxx_X,Rxx_Y = Lockin1.XY
         Rxy_X,Rxy_Y = Lockin2.XY
+        
+        B = Mag.get_B()
         
         Pipe.send([B,Rxx_X,Rxy_X,Rxx_Y,Rxy_Y])
         

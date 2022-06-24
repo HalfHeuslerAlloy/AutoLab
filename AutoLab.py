@@ -171,10 +171,13 @@ class Window(tk.Frame):
         #self.UtilLabel = tk.Label(self.UtilFrame,text="Utilities")
         #self.UtilLabel.pack(side="top")
         
+        
+        #Create untility tabs
         self.UtilTabs = ttk.Notebook(self.UtilFrame,height = 100,width = 495)
         self.UtilTabs.pack(side="bottom")
         
         self.CreateFileUtilTab()
+        self.CreateGraphUtilTab()
         
         
         
@@ -233,6 +236,8 @@ class Window(tk.Frame):
             Finished = self.CheckMeasureFinished()
             if Finished:
                 print("Measurement finished with exitcode {}".format(self.MeasHandler.Worker.exitcode))
+                self.MeasureFinished()
+                self.MeasureActive = False
         else:
             self.IndicatorLabel["image"] = self.Icons["IDLE"]
         
@@ -306,6 +311,7 @@ class Window(tk.Frame):
 #        self.y2Data = list(2 * np.cos(2 * np.pi * self.xData))
 #        self.xData = list(self.xData)
         
+        self.Data = []
         self.xData = []
         self.y1Data = []
         self.y2Data = []
@@ -335,17 +341,74 @@ class Window(tk.Frame):
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
     def UpdateGraph(self):
-        self.Plot1.set_xdata(self.xData)
-        self.Plot1.set_ydata(self.y1Data)
-        self.Plot2.set_xdata(self.xData)
-        self.Plot2.set_ydata(self.y2Data)
         
-        self.ax.relim()
-        self.ax.autoscale()
-        self.axtwin.relim()
-        self.axtwin.autoscale()
+        try:
+            xAxisSel = int(self.XaxisEntry.get())
+            Str = self.Y1axisEntry.get()
+            y1AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
+            Str = self.Y2axisEntry.get()
+            y2AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
+            
+            xData = [i[xAxisSel] for i in self.Data]
+            
+            y1Data = []
+            for Sel in y1AxisSel:
+                y1Data.append([i[Sel] for i in self.Data])
         
-        self.fig.canvas.draw()
+            y2Data = []
+            for Sel in y2AxisSel:
+                y2Data.append([i[Sel] for i in self.Data])
+            
+        except Exception as e:
+            
+            print(e)
+            
+            xAxisSel = 0
+            y1AxisSel = 1
+            y2AxisSel = 2
+            print("Invalid column selection")
+            return
+        
+        self.Plot1.set_xdata(xData)
+        self.Plot1.set_ydata(y1Data[0])
+        self.Plot2.set_xdata(xData)
+        self.Plot2.set_ydata(y2Data[0])
+        
+#        self.Plot1.set_data(*y1Data)
+#        self.Plot2.set_data(*y2Data)
+        
+        try:
+            self.ax.relim()
+            self.ax.autoscale()
+            self.axtwin.relim()
+            self.axtwin.autoscale()
+            
+            self.fig.canvas.draw()
+        except Exception as e:
+            print(e)
+    
+    def CreateGraphUtilTab(self):
+        
+        GraphUtilTab = tk.Frame(self.UtilTabs)
+        self.UtilTabs.add(GraphUtilTab,text="Graph Settings")
+        
+        XaxisEntryLabel = tk.Label(GraphUtilTab,text="X")
+        XaxisEntryLabel.grid(column=0, row=0)
+        self.XaxisEntry = tk.Entry(GraphUtilTab,width = 10)
+        self.XaxisEntry.insert(tk.END,"0")
+        self.XaxisEntry.grid(column=0, row=1)
+        
+        Y1axisEntryLabel = tk.Label(GraphUtilTab,text="Y1")
+        Y1axisEntryLabel.grid(column=1, row=0)
+        self.Y1axisEntry = tk.Entry(GraphUtilTab,width = 10)
+        self.Y1axisEntry.insert(tk.END,"1")
+        self.Y1axisEntry.grid(column=1, row=1)
+        
+        Y2axisEntryLabel = tk.Label(GraphUtilTab,text="Y2")
+        Y2axisEntryLabel.grid(column=2, row=0)
+        self.Y2axisEntry = tk.Entry(GraphUtilTab,width = 10)
+        self.Y2axisEntry.insert(tk.END,"2")
+        self.Y2axisEntry.grid(column=2, row=1)
     
     #########################################
     ####### Setup utilites section ##########
@@ -422,6 +485,7 @@ class Window(tk.Frame):
     def RunMeasure(self):
         
         #Reset all of graphing data lists
+        self.Data = []
         self.xData = []
         self.y1Data = []
         self.y2Data = []
@@ -464,9 +528,7 @@ class Window(tk.Frame):
             Data = self.PipeRecv.recv()
             
             if type(Data)!=str:
-                self.xData.append(Data[0])
-                self.y1Data.append(Data[1])
-                self.y2Data.append(Data[2])
+                self.Data.append(Data)
                 
             elif Data=="Esc":
                 self.MeasureFinished()

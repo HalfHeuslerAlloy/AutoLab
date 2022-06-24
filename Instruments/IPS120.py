@@ -5,6 +5,8 @@ Created on Fri May 13 10:54:26 2022
 @author: eenmv
 """
 
+from time import sleep
+
 class IPS120(object):
     
     def __init__(self, rm, channel):
@@ -15,12 +17,18 @@ class IPS120(object):
         self.inst.read_termination = "\r"
         
         try:
+            self.inst.clear()
+            self.inst.clear()
             #Set to remote and unlocked
             self.inst.write("C3")
+            sleep(0.1)
             #Set to extend high precesion return values
             self.inst.write("Q4")
+            sleep(0.1)
+            
+            self.inst.write("M1")
         except:
-            pass
+            print("Failed comms and setup")
         
         self.inst.clear()
         
@@ -31,29 +39,44 @@ class IPS120(object):
     def ExamineStatus(self):
         #Get Statues of machine
         self.inst.clear()
+        self.inst.clear()
+        
+        sleep(0.1)
         
         statusMessage = self.inst.query("X")
         #returns:
         #   XnmAnCnHnMmnPmn
-        self.SystemStatus = int(statusMessage[1:3])
-        
-        self.ActivityStatus = int(statusMessage[4])
+        try:
+            self.SystemStatus = int(statusMessage[1:3])
+        except:
+            print(statusMessage)
+            self.SystemStatus = None
+            
+        try:
+            self.ActivityStatus = int(statusMessage[4])
+        except:
+            print(statusMessage)
+            self.ActivityStatus = None
         
         if self.ActivityStatus==0:
             self.Activity = "Hold"
-            self.Ramping = False
             
         elif self.ActivityStatus==1:
-            self.Activity = "Ramping to Zero"
-            self.Ramping = True
+            self.Activity = "Ramping to Setpoint"
             
         elif self.ActivityStatus==2:
             self.Activity = "Ramping to Zero"
-            self.Ramping = True
             
         elif self.ActivityStatus==3:
             self.Activity = "Clamped"
+        
+        self.ModeStatus_m = int(statusMessage[10])
+        self.ModeStatus_n = int(statusMessage[11])
+        
+        if self.ModeStatus_n==0:
             self.Ramping = False
+        else:
+            self.Ramping = True
         
         self.SwitchHeaterStatus = int(statusMessage[8])
         
@@ -88,7 +111,9 @@ class IPS120(object):
         self.inst.write("J{:.5f}".format(B))
         
     def set_FieldRate(self,Rate):
-        self.inst.write("J{:.5f}".format(Rate))
+        """Sets the ramp rate of the magnet in Tesla/Min
+        """
+        self.inst.write("T{:.5f}".format(Rate))
     
     
     #set the activity of the IPS
