@@ -25,8 +25,9 @@ class IPS120(object):
             #Set to extend high precesion return values
             self.inst.write("Q4")
             sleep(0.1)
-            
+            #Set display to tesla
             self.inst.write("M1")
+            sleep(0.1)
         except:
             print("Failed comms and setup")
         
@@ -39,11 +40,19 @@ class IPS120(object):
     def ExamineStatus(self):
         #Get Statues of machine
         self.inst.clear()
-        self.inst.clear()
         
-        sleep(0.1)
-        
-        statusMessage = self.inst.query("X")
+        for Try in range(5):
+            #5 attempts to read the status of the instrument
+            self.inst.clear()
+            
+            sleep(0.1)
+            
+            statusMessage = self.inst.query("X")
+            
+            if len(statusMessage)==15:
+                break
+        if len(statusMessage)!=15:
+            raise Exception("Could not get status message from IPS120-10")
         #returns:
         #   XnmAnCnHnMmnPmn
         try:
@@ -98,13 +107,34 @@ class IPS120(object):
     
     
     def get_SweepRate(self):
-        return self.inst.query("R 9")
+        """Returns the field sweep rate
+        """
+        try:
+            rate = self.inst.query("R 9")
+            rate = float(rate)
+        except:
+            rate = None
+        return rate
     
     def get_SetPoint(self):
-        return self.inst.query("R 8")
+        """Returns the set point
+        """
+        try:
+            setP = self.inst.query("R 8")
+            setP = float(setP)
+        except:
+            setP = None
+        return setP
     
     def get_B(self):
-        return self.inst.query("R 7")
+        """Returns the current sweep rate
+        """
+        try:
+            B = self.inst.query("R 7")
+            B = float(B)
+        except:
+            B = None
+        return B
     
     
     def set_SetPoint(self,B):

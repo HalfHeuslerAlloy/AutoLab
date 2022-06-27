@@ -349,15 +349,15 @@ class Window(tk.Frame):
             Str = self.Y2axisEntry.get()
             y2AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
             
-            xData = [i[xAxisSel] for i in self.Data]
+            xData = [float(i[xAxisSel]) for i in self.Data]
             
             y1Data = []
             for Sel in y1AxisSel:
-                y1Data.append([i[Sel] for i in self.Data])
+                y1Data.append([float(i[Sel]) for i in self.Data])
         
             y2Data = []
             for Sel in y2AxisSel:
-                y2Data.append([i[Sel] for i in self.Data])
+                y2Data.append([float(i[Sel]) for i in self.Data])
             
         except Exception as e:
             
@@ -385,6 +385,7 @@ class Window(tk.Frame):
             
             self.fig.canvas.draw()
         except Exception as e:
+            print("Couldn't update graph")
             print(e)
     
     def CreateGraphUtilTab(self):
