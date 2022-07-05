@@ -114,8 +114,7 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
     Abort = False
     
     try:
-        Lockin1 = Inst.DSP_7265(rm,14)
-        Lockin2 = Inst.DSP_7280(rm,12)
+        Keith = rm.open_resource('GPIB0::'+str(11)+'::INSTR')
         Mag = Inst.IPS120(rm,25)
     except Exception as e:
         print(e)
@@ -123,7 +122,21 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
         return
     
     #column headers
-    Pipe.send("B    Rxx_X    Rxx_Y    Rxy_X    Rxy_Y")
+    Pipe.send("B    Rxx    Rxx?")
+    
+    try:
+        Keith.write("SYST:COMM:SER:SEND \"SENS:DATA?\"")
+        Rxx = Keith.query("SYST:COMM:SER:ENT?")
+            
+            
+        Rxx_1 = float(Rxx)
+        Rxx_2 = float(Rxx)
+        print(Rxx_1,Rxx_2)
+    except Exception as e:
+        print(e)
+        print("Failed to read 6221")
+        Pipe.send("Esc")
+        return
     
 
     #Test if Magnet switch heater is on
@@ -177,12 +190,16 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
         if Abort == True:
             break
         
-        Rxx_X,Rxx_Y = Lockin1.XY
-        Rxy_X,Rxy_Y = Lockin2.XY
+        Keith.write("SYST:COMM:SER:SEND \"SENS:DATA?\"")
+        Rxx = Keith.query("SYST:COMM:SER:ENT?")
+            
+            
+        Rxx_1 = float(Rxx)
+        Rxx_2 = float(Rxx)
         
         B = Mag.get_B()
         
-        Pipe.send([B,Rxx_X,Rxx_Y,Rxy_X,Rxy_Y])
+        Pipe.send([B,Rxx_1,Rxx_2])
         
         time.sleep(Dwl)
         Mag.ExamineStatus()
@@ -204,12 +221,16 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
         if Abort == True:
             break
         
-        Rxx_X,Rxx_Y = Lockin1.XY
-        Rxy_X,Rxy_Y = Lockin2.XY
+        Keith.write("SYST:COMM:SER:SEND \"SENS:DATA?\"")
+        Rxx = Keith.query("SYST:COMM:SER:ENT?")
+            
+            
+        Rxx_1 = float(Rxx)
+        Rxx_2 = float(Rxx)
         
         B = Mag.get_B()
         
-        Pipe.send([B,Rxx_X,Rxx_Y,Rxy_X,Rxy_Y])
+        Pipe.send([B,Rxx_1,Rxx_2])
         
         time.sleep(Dwl)
         Mag.ExamineStatus()
