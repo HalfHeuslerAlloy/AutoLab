@@ -131,8 +131,10 @@ class IPS120(object):
         """
         try:
             B = self.inst.query("R 7")
-            B = float(B)
-        except:
+            B = float(B[1:])
+        except Exception as e:
+            print(e)
+            print(B)
             B = None
         return B
     
