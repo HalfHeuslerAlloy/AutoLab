@@ -43,7 +43,10 @@ from multiprocessing import Process, Queue, Pipe
 
 import pyvisa
 
+#Autolab liberies
 import Instruments
+
+import Utility
 
 import Workers
 
@@ -118,6 +121,7 @@ class Window(tk.Frame):
         self.CreateMeasTab()
         
         self.SetupInstruments("Setup.txt")
+
         
         
         self.UtilFrame = tk.Frame()
@@ -127,6 +131,7 @@ class Window(tk.Frame):
         self.UtilFrame['padx'] = 5
         self.UtilFrame['pady'] = 5
         #self.UtilFrame['bg'] = "purple"
+        
         
         self.RunFrame = tk.Frame()
         self.RunFrame.grid(column=0, row=4, columnspan=1, rowspan=1)
@@ -175,9 +180,18 @@ class Window(tk.Frame):
         #Create untility tabs
         self.UtilTabs = ttk.Notebook(self.UtilFrame,height = 100,width = 495)
         self.UtilTabs.pack(side="bottom")
+        self.utilTabModules = {}
         
-        self.CreateFileUtilTab()
-        self.CreateGraphUtilTab()
+        #Add tabs to the utility tab wigdet
+        self.FileUtiltab = Utility.FileUtil.Util(self.UtilTabs)
+        self.utilTabModules[self.FileUtiltab.name] = self.FileUtiltab
+        #self.CreateFileUtilTab()
+        
+        self.GraphUtilTab = Utility.GraphUtil.Util(self.UtilTabs)
+        self.utilTabModules[self.GraphUtilTab.name] = self.GraphUtilTab
+        #self.CreateGraphUtilTab()
+        
+        self.SetupUtilTabs("Setup.txt")
         
         
         
@@ -262,6 +276,43 @@ class Window(tk.Frame):
         self.LoadMeasWorkerButton = tk.Button(menuFrame,text = "Load Script",command = self.LoadMeasWorker)
         self.LoadMeasWorkerButton.grid(column=0, row=0,sticky="w")
     
+    def SetupUtilTabs(self,SetupFile):
+        
+        print("Loading Utilities")
+        
+        file = open(SetupFile,"r")
+        
+        instSection = False
+        
+        for line in file:
+            
+            #Check if we have entered the instrument section of the setup file
+            if line.startswith("#"):
+                if line.startswith("#Utilities"):
+                    instSection = True
+                else:
+                    instSection = False
+            
+            
+            # If in the instrument section of setup file try to load each instrument
+            elif instSection:
+                #try to find instrument in Instruments module
+                #Load that instrument with given channel and name
+                try:
+                    tabStr = line.replace("\n","") # remove end of charactor
+                    print(tabStr)
+                    utilTabModule = getattr(Utility, tabStr)
+                    
+                    utilTabInst = utilTabModule.Util(self.UtilTabs)
+                    
+                    self.utilTabModules[utilTabInst.name] = utilTabInst
+                     
+                except Exception as e:
+                    print(e)
+                
+        
+        file.close()
+    
     ####################################################
     ####### Setup instruments from setup file ##########
     ####################################################
@@ -343,10 +394,11 @@ class Window(tk.Frame):
     def UpdateGraph(self):
         
         try:
-            xAxisSel = int(self.XaxisEntry.get())
-            Str = self.Y1axisEntry.get()
+            
+            xAxisSel = int(self.GraphUtilTab.XaxisEntry.get())
+            Str = self.GraphUtilTab.Y1axisEntry.get()
             y1AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
-            Str = self.Y2axisEntry.get()
+            Str = self.GraphUtilTab.Y2axisEntry.get()
             y2AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
             
             xData = [float(i[xAxisSel]) for i in self.Data]
@@ -387,29 +439,6 @@ class Window(tk.Frame):
         except Exception as e:
             print("Couldn't update graph")
             print(e)
-    
-    def CreateGraphUtilTab(self):
-        
-        GraphUtilTab = tk.Frame(self.UtilTabs)
-        self.UtilTabs.add(GraphUtilTab,text="Graph Settings")
-        
-        XaxisEntryLabel = tk.Label(GraphUtilTab,text="X")
-        XaxisEntryLabel.grid(column=0, row=0)
-        self.XaxisEntry = tk.Entry(GraphUtilTab,width = 10)
-        self.XaxisEntry.insert(tk.END,"0")
-        self.XaxisEntry.grid(column=0, row=1)
-        
-        Y1axisEntryLabel = tk.Label(GraphUtilTab,text="Y1")
-        Y1axisEntryLabel.grid(column=1, row=0)
-        self.Y1axisEntry = tk.Entry(GraphUtilTab,width = 10)
-        self.Y1axisEntry.insert(tk.END,"1")
-        self.Y1axisEntry.grid(column=1, row=1)
-        
-        Y2axisEntryLabel = tk.Label(GraphUtilTab,text="Y2")
-        Y2axisEntryLabel.grid(column=2, row=0)
-        self.Y2axisEntry = tk.Entry(GraphUtilTab,width = 10)
-        self.Y2axisEntry.insert(tk.END,"2")
-        self.Y2axisEntry.grid(column=2, row=1)
     
     #########################################
     ####### Setup utilites section ##########
@@ -631,13 +660,13 @@ class Window(tk.Frame):
         header = self.headerInput.get("1.0",tk.END)
         
         try:
-            Overide = bool(self.OverrideFile.get())
+            Overide = bool(self.FileUtiltab.OverrideFile.get())
         except Exception as e:
             print(e)
             print("failed to read overide checkbox value")
             return
         try:
-            AutoEnum = bool(self.AutoEnumerate.get())
+            AutoEnum = bool(self.FileUtiltab.AutoEnumerate.get())
         except Exception as e:
             print(e)
             print("failed to read AutoEnuerate checkbox value")

@@ -102,7 +102,7 @@ def Worker(Pipe,Str,Stp,Steps,Dwl):
         Y1 = np.sin(x)*x**1.2 + np.random.normal()
         Y2 = np.cos(x)*x**1.2 + np.random.normal()
         
-        Pipe.send([str(X),Y1,Y2])
+        Pipe.send([X,Y1,Y2])
 
         time.sleep(Dwl)
     
