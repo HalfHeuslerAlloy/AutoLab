@@ -38,6 +38,8 @@ import sys
 import os
 import datetime
 import time
+import importlib.util
+from pathlib import Path
 
 from multiprocessing import Process, Queue, Pipe
 
@@ -72,14 +74,18 @@ class Window(tk.Frame):
         
         self.Resources = Resources
         
-        #######  Setup Frames  #########
+        ###################################
+        ##########  Setup Frames  #########
+        ###################################
         
-        #menu frame        
+        
+        
+        #######  menu frame   #############
+        
         self.menuFrameSetup()
         
+        ############ File frame ###########
         
-        
-        #File frame
         self.fileSysFrame = tk.Frame()
         self.fileSysFrame.grid(column=0, row=1, columnspan=1, rowspan=1)
         self.fileSysFrame['borderwidth'] = 2
@@ -88,9 +94,36 @@ class Window(tk.Frame):
         self.fileSysFrame['pady'] = 5
         #self.fileSysFrame['bg'] = "green"
         
-        filenameLabel = tk.Label(self.fileSysFrame,text="Filename")
-        filenameLabel.grid(column=0,row=0,sticky="w")
+        #PathLabel = tk.Label(self.fileSysFrame,text="Path")
+        #PathLabel.grid(column=0,row=0,sticky="w")
         
+        self.pathInput = tk.Entry(self.fileSysFrame,width = 80)
+        self.pathInput.grid(column=0,row=0)
+        
+        self.path = tk.StringVar()
+        #Defaults to current directory
+        self.path.set(os.getcwd())
+        self.pathInput["textvariable"] = self.path
+        
+        #filenameLabel = tk.Label(self.fileSysFrame,text="Filename")
+        #filenameLabel.grid(column=0,row=1,sticky="w")
+        
+        self.filenameInput = tk.Entry(self.fileSysFrame,width = 80)
+        self.filenameInput.grid(column=0,row=1)
+        
+        self.filename = tk.StringVar()
+        #Defaults to test.txt
+        self.filename.set(r"test.txt")
+        self.filenameInput["textvariable"] = self.filename
+        
+        self.headerInput = tk.Text(self.fileSysFrame,width = 60,height = 4)
+        self.headerInput.grid(column=0,row=2)
+        
+        header = "Measuremented started at {}, this should get filled in when saved"
+        self.headerInput.insert("1.0",header)
+        
+        
+        ############## Graph frame ##################
         
         self.GraphFrame = tk.Frame()
         self.GraphFrame.grid(column=1, row=1, columnspan=1, rowspan=3)
@@ -103,6 +136,9 @@ class Window(tk.Frame):
         self.CreateGraph()
         #self.GraphCanvas = tk.Canvas(self.GraphFrame,width=500,height=500)
         #self.GraphCanvas.pack()
+        
+        
+        ############## Measurement frame ###################
         
         self.MeasFrame = tk.Frame()
         self.MeasFrame.grid(column=0, row=2, columnspan=1, rowspan=2)
@@ -122,7 +158,7 @@ class Window(tk.Frame):
         
         self.SetupInstruments("Setup.txt")
 
-        
+        ################### Utility frame ######################
         
         self.UtilFrame = tk.Frame()
         self.UtilFrame.grid(column=1, row=4, columnspan=1, rowspan=1)
@@ -132,6 +168,7 @@ class Window(tk.Frame):
         self.UtilFrame['pady'] = 5
         #self.UtilFrame['bg'] = "purple"
         
+        ############# Start/stop/busy frame ######################
         
         self.RunFrame = tk.Frame()
         self.RunFrame.grid(column=0, row=4, columnspan=1, rowspan=1)
@@ -193,24 +230,7 @@ class Window(tk.Frame):
         
         self.SetupUtilTabs("Setup.txt")
         
-        
-        
-        self.filenameInput = tk.Entry(self.fileSysFrame,width = 80)
-        self.filenameInput.grid(column=0,row=1)
-        
-        self.headerInput = tk.Text(self.fileSysFrame,width = 60,height = 3)
-        self.headerInput.grid(column=0,row=2)
 
-        
-        self.filename = tk.StringVar()
-        #Defaults to current directory
-        self.filename.set(os.getcwd() + r"\test.txt")
-        self.filenameInput["textvariable"] = self.filename
-        
-        header = "Measuremented started at {}, this should get filled in when saved"
-        self.headerInput.insert("1.0",header)
-        
-        
         
         self.UpdateWindow()
     
@@ -471,8 +491,12 @@ class Window(tk.Frame):
         
     def LoadMeasWorker(self):
         """
-        Tries to load the main script with name MeasWorker
+        Tries to load the expirement script from worker and 
+        assign it to self.MeasWorkerScript and similar.
         """
+        
+        #TODO Make it so that a script can be loaded from any location.
+        #TODO Failing that make is possible to have sub modules
         
         print("loading main script")
         
@@ -487,16 +511,24 @@ class Window(tk.Frame):
         self.WorkerFrame.grid(column=0, row=1, columnspan=3, rowspan=3)
         
         #Get filename of Expirement GUI and worker
-        filename = fd.askopenfile(initialdir = os.getcwd()+"\\Workers")
+        filename = fd.askopenfile(initialdir = os.getcwd()+"\\Workers") #OPen dialog box at desired folder
+        file_path = filename.name
         filename = filename.name[( len(os.getcwd())+1 ):-3]
         filename = filename.replace("/",".")
         module = filename.split(".")[1]
         if filename==None:
             return
         
+#        spec = importlib.util.spec_from_file_location("Worker", file_path)
+#        module = importlib.util.module_from_spec(spec)
+#        
+#        sys.modules["Worker"] = module
+#        spec.loader.exec_module(module)
+        
         #Load GUI and worker from filename
         #self.MeasWorkerScript = __import__(filename, fromlist=[''])
         
+        #self.MeasWorkerScript = sys.modules["Worker"]
         self.MeasWorkerScript = getattr(Workers, module)
         
         self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerFrame)
@@ -509,7 +541,7 @@ class Window(tk.Frame):
         
     
     ################################################################
-    ####### Starting, stop and moditoring measure section ##########
+    ##### Starting, stopping and moditoring measure section ########
     ################################################################
     
     def RunMeasure(self):
@@ -543,9 +575,10 @@ class Window(tk.Frame):
     
     def GetData(self):
         """
-        Check if the queue has anything in it
-        Loads data from the queue and adds it to the datasets
+        Check if the pipe has anything in it
+        Loads data from the pipe and adds it to the datasets
         """
+        #start timeout timer for reading the pipe contents, 5sec max
         Start_T = time.time()
         
         while(True):
@@ -557,12 +590,21 @@ class Window(tk.Frame):
             #get data from pipe
             Data = self.PipeRecv.recv()
             
+            #If data isn't a string append to rawdata list
             if type(Data)!=str:
                 self.Data.append(Data)
                 
+                
+            # TODO add more key work commands, NewFile, ClearGraph,
             elif Data=="Esc":
                 self.MeasureFinished()
                 break
+            elif Data=="ClearGraph":
+                self.Data = []
+                self.xData = []
+                self.y1Data = []
+                self.y2Data = []
+                
             
             ##### Save data to save file ####
             
@@ -581,7 +623,7 @@ class Window(tk.Frame):
     
     def CheckMeasureFinished(self):
         """
-        Checks if the measurement has finished without disturding it
+        Checks if the measurement has finished without disturding it, in theory
         """
         try:
             self.MeasHandler.Worker.join(timeout=0.1)
@@ -634,7 +676,7 @@ class Window(tk.Frame):
                 Data = self.PipeSend.recv()
                 print(Data)
             
-            print("Boths pipes have been emptied has been emptied")
+            print("Boths pipes have been emptied")
             
             self.MeasureActive = False
             self.CloseSaveFile()
@@ -655,9 +697,13 @@ class Window(tk.Frame):
         TODO:
             - Change this to ask if you want to overide file if trying to.
         """
-        
+        path = self.pathInput.get()
         filename = self.filenameInput.get()
         header = self.headerInput.get("1.0",tk.END)
+        
+        #Makes the directory if it doesn't exist
+        Path(path).mkdir(parents=True, exist_ok=True)
+        filenamePath = path + "\\" + filename
         
         try:
             Overide = bool(self.FileUtiltab.OverrideFile.get())
@@ -675,12 +721,12 @@ class Window(tk.Frame):
         
         if Overide:
             #Make/replaces file
-            self.file = open(filename,"w")
+            self.file = open(filenamePath,"w")
             self.file.seek(0)
             self.file.truncate()
         else:
             #Check if file exist before
-            fileExist = os.path.isfile(filename)
+            fileExist = os.path.isfile(filenamePath)
             
             if (AutoEnum==False) & (fileExist==True):
                 print("File already exist! Overide off and AutoEnumatation is also off")
@@ -692,7 +738,7 @@ class Window(tk.Frame):
             
             elif (AutoEnum==False) & (fileExist==False):
                 # Make file
-                self.file = open(filename,"w")
+                self.file = open(filenamePath,"w")
                 self.file.seek(0)
                 self.file.truncate()
                 
@@ -701,22 +747,22 @@ class Window(tk.Frame):
                 fileExist = True
                 N = 0
                 
-                enumFilename = filename
+                enumFilename = filenamePath
                 
                 while(fileExist):
                     
                     N += 1
                     EnumStr = str(N).zfill(3)
-                    enumFilename = filename[:-4] +"_"+ EnumStr + filename[-4:]
+                    enumFilename = filenamePath[:-4] +"_"+ EnumStr + filenamePath[-4:]
                     fileExist = os.path.isfile(enumFilename)
                     if N>999:
                         print("timeout finding Enumeration")
                         return False
                 
-                filename = enumFilename
+                filenamePath = enumFilename
                 
                 print("made file with number: ".format(N))
-                self.file = open(filename,"w")
+                self.file = open(filenamePath,"w")
                 self.file.seek(0)
                 self.file.truncate()
         
