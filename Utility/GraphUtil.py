@@ -42,6 +42,11 @@ class Util(tk.Frame):
         self.Y2axisEntry = tk.Entry(GraphUtilTab,width = 10)
         self.Y2axisEntry.insert(tk.END,"2")
         self.Y2axisEntry.grid(column=2, row=1)
+        
+        self.Autoscale = tk.IntVar()
+        self.Autoscale.set(True)
+        AutoscaleCheck = tk.Checkbutton(GraphUtilTab,text="Autoscale",variable=self.Autoscale)
+        AutoscaleCheck.grid(column=0, row=2)
 
 
 if __name__=="__main__":

@@ -449,16 +449,17 @@ class Window(tk.Frame):
 #        self.Plot1.set_data(*y1Data)
 #        self.Plot2.set_data(*y2Data)
         
-        try:
-            self.ax.relim()
-            self.ax.autoscale()
-            self.axtwin.relim()
-            self.axtwin.autoscale()
-            
-            self.fig.canvas.draw()
-        except Exception as e:
-            print("Couldn't update graph")
-            print(e)
+        if bool(self.GraphUtilTab.Autoscale.get()):
+            try:
+                self.ax.relim()
+                self.ax.autoscale()
+                self.axtwin.relim()
+                self.axtwin.autoscale()
+                
+                self.fig.canvas.draw()
+            except Exception as e:
+                print("Couldn't update graph")
+                print(e)
     
     #########################################
     ####### Setup utilites section ##########
@@ -841,4 +842,5 @@ if __name__=="__main__":
     #Make and start main window
     root = tk.Tk()
     Experiment = Window(root,Resources)
+    root.title("Autolab")
     Experiment.mainloop()
