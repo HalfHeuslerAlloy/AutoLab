@@ -455,11 +455,14 @@ class Window(tk.Frame):
                 self.ax.autoscale()
                 self.axtwin.relim()
                 self.axtwin.autoscale()
-                
-                self.fig.canvas.draw()
             except Exception as e:
-                print("Couldn't update graph")
+                print("Couldn't autosclae graph")
                 print(e)
+        
+        try:
+            self.fig.canvas.draw()
+        except:
+            print("Couldn't update graph")
     
     #########################################
     ####### Setup utilites section ##########
@@ -496,9 +499,6 @@ class Window(tk.Frame):
         assign it to self.MeasWorkerScript and similar.
         """
         
-        #TODO Make it so that a script can be loaded from any location.
-        #TODO Failing that make is possible to have sub modules
-        
         print("loading main script")
         
         #DESTROY this previous wokerframe if it exist
@@ -516,7 +516,7 @@ class Window(tk.Frame):
         file_path = filename.name
         filename = filename.name[( len(os.getcwd())+1 ):-3]
         filename = filename.replace("/",".")
-        module = filename.split(".")[1]
+        modules = filename.split(".")
         if filename==None:
             return
         
@@ -530,7 +530,9 @@ class Window(tk.Frame):
         #self.MeasWorkerScript = __import__(filename, fromlist=[''])
         
         #self.MeasWorkerScript = sys.modules["Worker"]
-        self.MeasWorkerScript = getattr(Workers, module)
+        self.MeasWorkerScript = Workers
+        for module in modules[1:]:
+            self.MeasWorkerScript = getattr(self.MeasWorkerScript, module)
         
         self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerFrame)
         
@@ -553,12 +555,16 @@ class Window(tk.Frame):
         self.y1Data = []
         self.y2Data = []
         
-        if self.CreateFile():
-            print("File created")
-        else:
+        try:
+            filename = self.filenameInput.get()
+            if self.CreateFile(filename):
+                print("File created")
+            else:
+                raise()
+        except Exception as e:
+            print(e)
             print("Failed to create file")
             return
-        
         
         # try to start the measure, raise error if it failed
         try:
@@ -583,6 +589,10 @@ class Window(tk.Frame):
         Start_T = time.time()
         
         while(True):
+            # Timeout if it spends too long reading the que, likely because is very full
+            if time.time()-Start_T>5:
+                print("Timeout, Queue might be too large!")
+                break
             
             #Check if there is something to recieve in the pipe
             if not self.PipeRecv.poll():
@@ -595,7 +605,7 @@ class Window(tk.Frame):
             if type(Data)!=str:
                 self.Data.append(Data)
                 
-                
+            
             # TODO add more key work commands, NewFile, ClearGraph,
             elif Data=="Esc":
                 self.MeasureFinished()
@@ -605,6 +615,7 @@ class Window(tk.Frame):
                 self.xData = []
                 self.y1Data = []
                 self.y2Data = []
+                continue
                 
             
             ##### Save data to save file ####
@@ -617,10 +628,7 @@ class Window(tk.Frame):
             
             #write Data to string
             self.file.write( str(Data) )
-            
-            if time.time()-Start_T>5:
-                print("Timeout, Queue might be too large!")
-                break
+
     
     def CheckMeasureFinished(self):
         """
@@ -691,7 +699,7 @@ class Window(tk.Frame):
     ####### Save filename managemant section ##########
     ##################################################
     
-    def CreateFile(self):
+    def CreateFile(self,filename):
         """
         Creates and opens file with filename inputted
         
@@ -699,7 +707,6 @@ class Window(tk.Frame):
             - Change this to ask if you want to overide file if trying to.
         """
         path = self.pathInput.get()
-        filename = self.filenameInput.get()
         header = self.headerInput.get("1.0",tk.END)
         
         #Makes the directory if it doesn't exist
@@ -711,13 +718,13 @@ class Window(tk.Frame):
         except Exception as e:
             print(e)
             print("failed to read overide checkbox value")
-            return
+            return False
         try:
             AutoEnum = bool(self.FileUtiltab.AutoEnumerate.get())
         except Exception as e:
             print(e)
             print("failed to read AutoEnuerate checkbox value")
-            return
+            return False
         
         
         if Overide:
@@ -769,7 +776,7 @@ class Window(tk.Frame):
         
         #Inset header file here
         #Add current date and time if needed
-        self.file.write(header.format( str(datetime.datetime.now() ) ) )
+        self.file.write(header.format( str(datetime.datetime.now() ).split(".")[0] ) )
         self.file.write("\n#HeaderEnd\n\n")
         
         #return True for succesful file creation

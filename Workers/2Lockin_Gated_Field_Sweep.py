@@ -53,19 +53,19 @@ class Handler(tk.Frame):
         
         ########### Keithley settings ################
         
-        GateStartEntryLabel = tk.Label(master,text="Gate Start (T)")
+        GateStartEntryLabel = tk.Label(master,text="Gate Start (V)")
         GateStartEntryLabel.grid(column=1, row=0)
         self.GateStartEntry = tk.Entry(master,width = 10)
         self.GateStartEntry.insert(tk.END,"-0.1")
         self.GateStartEntry.grid(column=1, row=1)
         
-        GateStopEntryLabel = tk.Label(master,text="Gate Stop (T)")
+        GateStopEntryLabel = tk.Label(master,text="Gate Stop (V)")
         GateStopEntryLabel.grid(column=1, row=2)
         self.GateStopEntry = tk.Entry(master,width = 10)
         self.GateStopEntry.insert(tk.END,"0.1")
         self.GateStopEntry.grid(column=1, row=3)
         
-        GateStepEntryLabel = tk.Label(master,text="Gate Step Size (T)")
+        GateStepEntryLabel = tk.Label(master,text="Gate Step Size (V)")
         GateStepEntryLabel.grid(column=1, row=4)
         self.GateStepEntry = tk.Entry(master,width = 10)
         self.GateStepEntry.insert(tk.END,"0.01")
@@ -88,9 +88,9 @@ class Handler(tk.Frame):
         Stp  = float(self.StopEntry.get() )
         Step = float(self.StepEntry.get())
         
-        gateStr  = float(self.StartEntry.get())
-        gateStp  = float(self.StopEntry.get() )
-        gateStep = float(self.StepEntry.get())
+        gateStr  = float(self.GateStartEntry.get())
+        gateStp  = float(self.GateStopEntry.get() )
+        gateStep = float(self.GateStepEntry.get())
         
         Dwl  = float(self.DwellEntry.get())
         
@@ -107,10 +107,11 @@ class Handler(tk.Frame):
         
         print("Field will start at {0}T and peak at at {1}T".format(Str,Stp))
         
-        totalPoints = abs(Str-Stp)/Step + 1 + abs(gateStr-gateStp)/gateStep + 1
+        totalPoints = (2 * abs(Str-Stp)/Step + 2) * (2 * abs(gateStr-gateStp)/gateStep + 2)
         
         print("Total number of points will be {}".format(totalPoints))
-        print("Estimated time to complet is {}mins".format(totalPoints*(Dwl+0.2)/60))
+        totalTime = totalPoints*(Dwl)/60 + 2*abs(Stp-Str)/0.1 #Estimated total time in minutes
+        print("Estimated time to complet is {}mins".format( round(totalTime,1) ))
         
         try:
             
@@ -157,11 +158,11 @@ def Worker(Pipe,Str,Stp,Step,gateStr,gateStp,gateStep,Dwl):
     #column headers
     Pipe.send("#B(T)    Gate(V)    Vxx_X(V)    Vxx_Y(V)    Vxy_X(V)    Vxy_Y(V)\n")
     
-    numBPoints = abs(Str-Stp)/Step + 1
+    numBPoints = round(abs(Str-Stp)/Step + 1)
     B_points = np.append(np.linspace(Str,Stp,numBPoints),
                          np.linspace(Stp,Str,numBPoints))
     
-    numGPoints = abs(gateStr-gateStp)/gateStep + 1
+    numGPoints = round(abs(gateStr-gateStp)/gateStep + 1)
     G_points = np.append(np.linspace(gateStr,gateStp,numGPoints),
                          np.linspace(gateStp,gateStr,numGPoints))
 
@@ -213,15 +214,19 @@ def Worker(Pipe,Str,Stp,Step,gateStr,gateStp,gateStep,Dwl):
         if Abort == True:
             break
         
+        
         Mag.set_SetPoint(B)
         time.sleep(0.1)
-        Mag.sweep_SetPoint()
+        #Mag.sweep_SetPoint()
         time.sleep(0.1)
+        Mag.inst.clear()
         
         Keith.setV(gateStr)
         
         #time for time to reach next B point
-        time.sleep(Step/0.1)
+        time.sleep(Step/0.1*60)
+        
+        B_real = Mag.get_B()
         
         for G in G_points:
             
@@ -229,7 +234,7 @@ def Worker(Pipe,Str,Stp,Step,gateStr,gateStp,gateStep,Dwl):
             Rxx_X,Rxx_Y = Lockin1.XY
             Rxy_X,Rxy_Y = Lockin2.XY
         
-            Pipe.send([B,G,Rxx_X,Rxx_Y,Rxy_X,Rxy_Y])
+            Pipe.send([B_real,G,Rxx_X,Rxx_Y,Rxy_X,Rxy_Y])
             
             time.sleep(Dwl)
 
@@ -239,6 +244,8 @@ def Worker(Pipe,Str,Stp,Step,gateStr,gateStp,gateStep,Dwl):
     time.sleep(0.1)
     Mag.sweep_SetPoint()
     time.sleep(0.1)
+    
+    Keith.setV(0)
     
     Pipe.send("Esc")
 

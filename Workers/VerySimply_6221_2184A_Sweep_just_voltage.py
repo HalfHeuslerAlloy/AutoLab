@@ -125,6 +125,7 @@ def Worker(Pipe,Str,Stp,Rate,Dwl):
     Pipe.send("B    Rxx    Rxx?")
     
     try:
+        Keith.clear()
         Keith.write("SYST:COMM:SER:SEND \"SENS:DATA?\"")
         Rxx = Keith.query("SYST:COMM:SER:ENT?")
             
