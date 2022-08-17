@@ -14,3 +14,5 @@ from .FileUtil import *
 #test utility
 from .TestUtil import *
 from .TimeUtil import *
+
+from .IPSMagUtil import *

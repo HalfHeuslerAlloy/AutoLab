@@ -52,6 +52,8 @@ import Utility
 
 import Workers
 
+#Main class and window
+
 class Window(tk.Frame):
     """
     Main window for AutoLab
@@ -78,11 +80,16 @@ class Window(tk.Frame):
         ##########  Setup Frames  #########
         ###################################
         
-        
+        # Find either Setup.txt or SetupExample.txt
+        if os.path.isfile(os.getcwd()+"\\Setup.txt"):
+            setupFilename = "Setup.txt"
+        else:
+            print("\n\n    WARNING: Defaulting to the example setup file!   \n\n")
+            setupFilename = "SetupExample.txt"
         
         #######  menu frame   #############
         
-        self.menuFrameSetup()
+        self.MenuFrameSetup()
         
         ############ File frame ###########
         
@@ -156,7 +163,7 @@ class Window(tk.Frame):
         
         self.CreateMeasTab()
         
-        self.SetupInstruments("Setup.txt")
+        self.SetupInstruments(setupFilename)
 
         ################### Utility frame ######################
         
@@ -228,7 +235,7 @@ class Window(tk.Frame):
         self.utilTabModules[self.GraphUtilTab.name] = self.GraphUtilTab
         #self.CreateGraphUtilTab()
         
-        self.SetupUtilTabs("Setup.txt")
+        self.SetupUtilTabs(setupFilename)
         
 
         
@@ -283,7 +290,7 @@ class Window(tk.Frame):
     ####### Setup utilites section ##########
     #########################################
     
-    def menuFrameSetup(self):
+    def MenuFrameSetup(self):
         """
         Setup menu options at the top of the window. add extra functionality here.
         """
@@ -512,7 +519,7 @@ class Window(tk.Frame):
         self.WorkerFrame.grid(column=0, row=1, columnspan=3, rowspan=3)
         
         #Get filename of Expirement GUI and worker
-        filename = fd.askopenfile(initialdir = os.getcwd()+"\\Workers") #OPen dialog box at desired folder
+        filename = fd.askopenfile(initialdir = os.getcwd()+"\\Workers") #Open dialog box at desired folder
         file_path = filename.name
         filename = filename.name[( len(os.getcwd())+1 ):-3]
         filename = filename.replace("/",".")
@@ -624,6 +631,7 @@ class Window(tk.Frame):
             # TODO add option for tab or comma delimter file
             if type(Data)==list:
                 Data = str(Data)
+                Data = Data.replace(", ",self.delimiterOption)
                 Data = Data[1:-1]+"\n"
             
             #write Data to string
@@ -714,17 +722,24 @@ class Window(tk.Frame):
         filenamePath = path + "\\" + filename
         
         try:
-            Overide = bool(self.FileUtiltab.OverrideFile.get())
+            Overide = self.FileUtiltab.fileMakeOption.get()
+            if Overide=="O":
+                Overide = True
+                AutoEnum = False
+            else:
+                Overide = False
+                AutoEnum = True
         except Exception as e:
             print(e)
-            print("failed to read overide checkbox value")
+            print("failed to read make file options checkbox value")
             return False
+        
+        # CHeck delimiter option from file ultility window
         try:
-            AutoEnum = bool(self.FileUtiltab.AutoEnumerate.get())
+            self.delimiterOption = self.FileUtiltab.delimiterOption.get()
         except Exception as e:
             print(e)
-            print("failed to read AutoEnuerate checkbox value")
-            return False
+            print("Failed to get delimiterOption")
         
         
         if Overide:

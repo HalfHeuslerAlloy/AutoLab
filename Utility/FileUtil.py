@@ -26,12 +26,42 @@ class Util(tk.Frame):
         
         
         #TODO - Make this an either/or option
-        self.OverrideFile = tk.IntVar()
-        OverrideFile = tk.Checkbutton(FileUtilTab,text="Override",variable=self.OverrideFile)
-        OverrideFile.pack()
-        self.AutoEnumerate = tk.IntVar()
-        AutoEnumerate = tk.Checkbutton(FileUtilTab,text="Auto Enumerate",variable=self.AutoEnumerate)
-        AutoEnumerate.pack()
+        
+        OverwriteFrame = tk.Frame(FileUtilTab)
+        OverwriteFrame.pack(side=tk.LEFT)
+        
+        self.fileMakeOption = tk.StringVar(None,"A")
+        
+        AutoEnumerateOption = ttk.Radiobutton(OverwriteFrame,
+                                              text="Auto Enumerate         ",
+                                              variable=self.fileMakeOption,
+                                              value="A")
+        AutoEnumerateOption.pack(anchor="w")
+        
+        OverwriteOption = ttk.Radiobutton(OverwriteFrame,
+                                          text="Overwrite",
+                                          variable=self.fileMakeOption,
+                                          value="O")
+        OverwriteOption.pack(anchor="w")
+        
+        
+        DelimiterFrame = tk.Frame(FileUtilTab)
+        DelimiterFrame.pack(side=tk.LEFT)
+        
+        # Defaults to 4 spaces
+        self.delimiterOption = tk.StringVar(None,"    ")
+        
+        SpaceOption = ttk.Radiobutton(DelimiterFrame,
+                                          text="4 Spaces",
+                                          variable=self.delimiterOption,
+                                          value="    ")
+        SpaceOption.pack(anchor="w")
+        
+        CommaOptionOption = ttk.Radiobutton(DelimiterFrame,
+                                              text="Comma ,",
+                                              variable=self.delimiterOption,
+                                              value=",")
+        CommaOptionOption.pack(anchor="w")
 
 
 if __name__=="__main__":

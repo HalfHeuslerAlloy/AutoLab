@@ -35,7 +35,11 @@ class IPS120(object):
         
     
     def __del__(self):
-        self.inst.close()
+        try:
+            self.inst.close()
+        except Exception as e:
+            print(e)
+            print("Failed to close, or never connected")
     
     def ExamineStatus(self):
         #Get Statues of machine
@@ -71,13 +75,15 @@ class IPS120(object):
             self.Activity = "Hold"
             
         elif self.ActivityStatus==1:
-            self.Activity = "Ramping to Setpoint"
+            self.Activity = "Ramp to Setpoint"
             
         elif self.ActivityStatus==2:
-            self.Activity = "Ramping to Zero"
+            self.Activity = "Ramp to Zero"
             
         elif self.ActivityStatus==3:
             self.Activity = "Clamped"
+        else:
+            self.Activity = "unknown"
         
         self.ModeStatus_m = int(statusMessage[10])
         self.ModeStatus_n = int(statusMessage[11])
@@ -92,7 +98,7 @@ class IPS120(object):
         if self.SwitchHeaterStatus==1:
             self.is_SwitchHeaterOn = True
         else:
-            self.is_SwitchHeaterON = False
+            self.is_SwitchHeaterOn = False
             
         self.RemoteStatus = int(statusMessage[6])
         
@@ -120,11 +126,13 @@ class IPS120(object):
         """Returns the set point
         """
         try:
-            setP = self.inst.query("R 8")
-            setP = float(setP)
-        except:
-            setP = None
-        return setP
+            setB = self.inst.query("R 8")
+            setB = float(setB[1:])
+        except Exception as e:
+            print(e)
+            print(setB)
+            setB = None
+        return setB
     
     def get_B(self):
         """Returns the current sweep rate
