@@ -68,7 +68,7 @@ if __name__=="__main__":
     
     #Make and start main window
     root = tk.Tk()
-    UtilTabs = ttk.Notebook(root,height = 100,width = 495)
+    UtilTabs = ttk.Notebook(root,height = 100,width = 595)
     UtilTabs.pack()
     UtilTab = Util(UtilTabs)
     UtilTab.mainloop()

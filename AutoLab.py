@@ -31,6 +31,7 @@ from matplotlib.backends.backend_tkagg import (
 # Implement the default Matplotlib key bindings.
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
+from matplotlib import ticker
 
 
 import numpy as np
@@ -222,7 +223,7 @@ class Window(tk.Frame):
         
         
         #Create untility tabs
-        self.UtilTabs = ttk.Notebook(self.UtilFrame,height = 100,width = 495)
+        self.UtilTabs = ttk.Notebook(self.UtilFrame,height = 100,width = 595)
         self.UtilTabs.pack(side="bottom")
         self.utilTabModules = {}
         
@@ -251,9 +252,6 @@ class Window(tk.Frame):
         Avoid running long process here, must be quick as possible
         """
         
-        #self.xData.append(self.xData[-1]+0.01)
-        #self.y1Data.append(2 * np.sin(2 * np.pi * self.xData[-1]))
-        #self.y2Data.append(2 * np.cos(2 * np.pi * self.xData[-1]))
         
         if self.MeasureActive:
             # Update measurement stuff
@@ -379,16 +377,12 @@ class Window(tk.Frame):
     ####### Matplotlib Graphing stuff ##########
     ############################################
 
-    def CreateGraph(self,width=5,Height=4.5,dpi=100):
+    def CreateGraph(self,width=6,Height=4.62,dpi=50):
         """
         Create a matplotlib figure inside the graphing frame for ploting data
         """
         
-#        self.xData = np.arange(0, 3, .01)
-#        self.y1Data = list(2 * np.sin(2 * np.pi * self.xData))
-#        self.y2Data = list(2 * np.cos(2 * np.pi * self.xData))
-#        self.xData = list(self.xData)
-        
+        #self.Data = [[0,0e-5,0e-5],[1,1e-5,1e-5],[2,2e-5,4e-5],[3,3e-5,9e-5],[4,4e-5,16e-5]]
         self.Data = []
         self.xData = []
         self.y1Data = []
@@ -409,6 +403,15 @@ class Window(tk.Frame):
         self.ax.tick_params(axis='y', colors='#000000')
         self.axtwin.tick_params(axis='y', colors='#E69F00')
         
+        #self.ax.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
+        #self.axtwin.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
+        
+        formatter = ticker.ScalarFormatter(useMathText=True)
+        formatter.set_scientific(True) 
+        formatter.set_powerlimits((-2,2))
+        
+        self.ax.yaxis.set_major_formatter(formatter)
+        self.axtwin.yaxis.set_major_formatter(formatter)
         
         canvas = FigureCanvasTkAgg(self.fig, master=self.GraphFrame)  # A tk.DrawingArea.
         canvas.draw()
@@ -470,24 +473,6 @@ class Window(tk.Frame):
             self.fig.canvas.draw()
         except:
             print("Couldn't update graph")
-    
-    #########################################
-    ####### Setup utilites section ##########
-    #########################################
-    
-    def CreateFileUtilTab(self):
-        """Creates the utilities tab for controlling how the file should be saved
-        """
-        FileUtilTab = tk.Frame(self.UtilTabs)
-        self.UtilTabs.add(FileUtilTab,text="Save Settings")
-        
-        #TODO - Make this an either/or option
-        self.OverrideFile = tk.IntVar()
-        OverrideFile = tk.Checkbutton(FileUtilTab,text="Override",variable=self.OverrideFile)
-        OverrideFile.pack()
-        self.AutoEnumerate = tk.IntVar()
-        AutoEnumerate = tk.Checkbutton(FileUtilTab,text="Auto Enumerate",variable=self.AutoEnumerate)
-        AutoEnumerate.pack()
         
     ########################################
     ####### Setup Measure section ##########
@@ -555,6 +540,9 @@ class Window(tk.Frame):
     ################################################################
     
     def RunMeasure(self):
+        """Starts the measurement Worker
+        Calls the MeasHandler.Start and gives it the Pipe to send data back and forth
+        """
         
         #Reset all of graphing data lists
         self.Data = []
@@ -573,7 +561,7 @@ class Window(tk.Frame):
             print("Failed to create file")
             return
         
-        # try to start the measure, raise error if it failed
+        # try to start the measurement worker, raise error if it failed
         try:
             if self.MeasHandler.Start(self.PipeSend):
                 print("Measurement Started")
@@ -608,6 +596,8 @@ class Window(tk.Frame):
             #get data from pipe
             Data = self.PipeRecv.recv()
             
+            #TODO make flags for drawning to graph
+            #TODO unwraping multiple points
             #If data isn't a string append to rawdata list
             if type(Data)!=str:
                 self.Data.append(Data)
@@ -628,11 +618,10 @@ class Window(tk.Frame):
             ##### Save data to save file ####
             
             #Convert Data list to string and remove the brackets
-            # TODO add option for tab or comma delimter file
             if type(Data)==list:
                 Data = str(Data)
                 Data = Data.replace(", ",self.delimiterOption)
-                Data = Data[1:-1]+"\n"
+                Data = Data[1:-1]+"\n" #removes brackets on either end and ameks new line
             
             #write Data to string
             self.file.write( str(Data) )
@@ -802,6 +791,8 @@ class Window(tk.Frame):
         pass
     
     def CloseSaveFile(self):
+        """Closes Save file
+        """
         self.file.close()
         print("Save file has been closed")
 

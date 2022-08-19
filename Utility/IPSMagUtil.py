@@ -16,11 +16,10 @@ import pyvisa
 import Instruments as Inst
 
 class Util(tk.Frame):
-    """
-    Test utility function
+    """Controller widget for a IPS120 magnet power supply
     """
     
-    #Name of utility so it can e refer to later as part of a dictionary
+    #Name of utility so it can be refer to later as part of a dictionary
     name = "IPS"
     
     # B, setB,Heater,Ramping,mode
@@ -79,23 +78,24 @@ class Util(tk.Frame):
         self.SetpointEntry.insert(tk.END,"0")
         self.SetpointEntry.grid(column = 2, row = 1)
         
-        RampEntryLabel = tk.Label(frame,text="Ramp Rate (T/min)")
+        RampEntryLabel = tk.Label(frame,text="Ramp (T/min)")
         RampEntryLabel.grid(column = 3, row = 0)
         self.RampEntry = tk.Entry(frame,width = 10)
         self.RampEntry.insert(tk.END,"0.1")
         self.RampEntry.grid(column = 3, row = 1)
         
+        
         self.HeaterButton = tk.Button(frame,
-                                         text = "Heater",
+                                         text = "Toggle Heater",
                                          command = self.ToggleHeater,
                                          )
-        self.HeaterButton.grid(column = 2, row = 2)
+        self.HeaterButton.grid(column = 4, row = 0)
         
         self.StartRampButton = tk.Button(frame,
-                                         text = "Ramp",
+                                         text = " Ramp Start ",
                                          command = self.StartRamp,
                                          )
-        self.StartRampButton.grid(column = 3, row = 2)
+        self.StartRampButton.grid(column = 4, row = 2)
         
         # B, setB,Heater,Ramping,mode
         self.statParam = ["NAN","NAN","NAN","NAN","NAN"]
@@ -103,7 +103,7 @@ class Util(tk.Frame):
         self.StatusLabel = tk.Label(frame,text=self.statusTemplate.format(*self.statParam),
                                     relief=tk.RIDGE,
                                     justify=tk.LEFT)
-        self.StatusLabel.grid(column=4, row=0, rowspan=4)
+        self.StatusLabel.grid(column=5, row=0, rowspan=4)
         
     def Connect(self):
         """Connect to eht IPS-120 magnet power supply, 
@@ -146,7 +146,10 @@ class Util(tk.Frame):
         
         try:
             self.Mag.ExamineStatus()
+            time.sleep(0.1)
             B = self.Mag.get_B()
+            time.sleep(0.1)
+            self.Mag.inst.clear()
             setB = self.Mag.get_SetPoint()
             
             if self.Mag.is_SwitchHeaterOn:
@@ -173,11 +176,11 @@ class Util(tk.Frame):
             heater = self.Mag.is_SwitchHeaterOn
             
             if heater==True:
-                self.Mag.SwitchHeaterOn()
-                print("Heater on, wait 1 min for warm up")
-            elif heater==False:
                 self.Mag.SwitchHeaterOff()
-                print("Heater off, wait 1 min for cool down")
+                print("Heater turned off, wait 1 min for cool down")
+            elif heater==False:
+                self.Mag.SwitchHeaterOn()
+                print("Heater turned on, wait 1 min for warm up")
             
         except Exception as e:
             print(e)
@@ -217,7 +220,7 @@ if __name__=="__main__":
     
     #Make and start main window
     root = tk.Tk()
-    UtilTabs = ttk.Notebook(root,height = 100,width = 495)
+    UtilTabs = ttk.Notebook(root,height = 100,width = 595)
     UtilTabs.pack()
     UtilTab = Util(UtilTabs)
     UtilTab.mainloop()
