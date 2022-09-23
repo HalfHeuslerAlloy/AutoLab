@@ -43,7 +43,7 @@ class Handler(tk.Frame):
         StepEntryLabel = tk.Label(master,text="Steps")
         StepEntryLabel.pack()
         self.StepsEntry = tk.Entry(master,width = 10)
-        self.StepsEntry.insert(tk.END,"100")
+        self.StepsEntry.insert(tk.END,"11")
         self.StepsEntry.pack()
         
         DwellEntryLabel = tk.Label(master,text="Dwell (s)")
@@ -91,20 +91,20 @@ def Worker(Pipe,Str,Stp,Steps,Dwl):
  
     for x in np.linspace(Str,Stp,Steps):
         
-        #Check for commands from controller
-        if Pipe.poll():
-            Comm = Pipe.recv()
-            if Comm=="STOP":
-                break
+        for y in np.linspace(Str,Stp,Steps):
         
-        X = x
-        
-        Y1 = np.sin(x)*x**1.2 + np.random.normal()
-        Y2 = np.cos(x)*x**1.2 + np.random.normal()
-        
-        Pipe.send([X,Y1,Y2])
-
-        time.sleep(Dwl)
+            #Check for commands from controller
+            if Pipe.poll():
+                Comm = Pipe.recv()
+                if Comm=="STOP":
+                    break
+            
+            
+            z = np.cos(x)*np.sin(y)*x*y  + np.random.normal()
+            
+            Pipe.send([x,y,z])
+    
+            time.sleep(Dwl)
     
     Pipe.send("Esc")
 

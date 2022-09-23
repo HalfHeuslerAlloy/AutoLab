@@ -60,6 +60,9 @@ class Window(tk.Frame):
     Main window for AutoLab
     This class should handle GUI
     """
+    
+    Data = []
+    
     def __init__(self, master,Resources):
         """
         Initial setup of widgets and the general window position
@@ -92,7 +95,33 @@ class Window(tk.Frame):
         
         self.MenuFrameSetup()
         
-        ############ File frame ###########
+        ######### Utility frame and Tabs ###########
+        
+        self.UtilFrame = tk.Frame()
+        self.UtilFrame.grid(column=1, row=4, columnspan=1, rowspan=1)
+        self.UtilFrame['borderwidth'] = 2
+        self.UtilFrame['relief'] = 'raised'
+        self.UtilFrame['padx'] = 5
+        self.UtilFrame['pady'] = 5
+        #self.UtilFrame['bg'] = "purple"
+        
+        #Create untility tabs
+        self.UtilTabs = ttk.Notebook(self.UtilFrame,height = 100,width = 595)
+        self.UtilTabs.pack(side="bottom")
+        self.utilTabModules = {}
+        
+        #Add tabs to the utility tab wigdet
+        self.FileUtiltab = Utility.FileUtil.Util(self.UtilTabs)
+        self.utilTabModules[self.FileUtiltab.name] = self.FileUtiltab
+        #self.CreateFileUtilTab()
+        
+        self.GraphUtilTab = Utility.GraphUtil.Util(self.UtilTabs)
+        self.utilTabModules[self.GraphUtilTab.name] = self.GraphUtilTab
+        #self.CreateGraphUtilTab()
+        
+        self.SetupUtilTabs(setupFilename)
+        
+        ############## File frame ##################
         
         self.fileSysFrame = tk.Frame()
         self.fileSysFrame.grid(column=0, row=1, columnspan=1, rowspan=1)
@@ -131,7 +160,7 @@ class Window(tk.Frame):
         self.headerInput.insert("1.0",header)
         
         
-        ############## Graph frame ##################
+        ############## Graph frame + Graph utility ##################
         
         self.GraphFrame = tk.Frame()
         self.GraphFrame.grid(column=1, row=1, columnspan=1, rowspan=3)
@@ -139,11 +168,10 @@ class Window(tk.Frame):
         self.GraphFrame['relief'] = 'raised'
         self.GraphFrame['padx'] = 5
         self.GraphFrame['pady'] = 5
-        #self.GraphFrame['bg'] = "black"
+        
+        
         
         self.CreateGraph()
-        #self.GraphCanvas = tk.Canvas(self.GraphFrame,width=500,height=500)
-        #self.GraphCanvas.pack()
         
         
         ############## Measurement frame ###################
@@ -166,15 +194,7 @@ class Window(tk.Frame):
         
         self.SetupInstruments(setupFilename)
 
-        ################### Utility frame ######################
         
-        self.UtilFrame = tk.Frame()
-        self.UtilFrame.grid(column=1, row=4, columnspan=1, rowspan=1)
-        self.UtilFrame['borderwidth'] = 2
-        self.UtilFrame['relief'] = 'raised'
-        self.UtilFrame['padx'] = 5
-        self.UtilFrame['pady'] = 5
-        #self.UtilFrame['bg'] = "purple"
         
         ############# Start/stop/busy frame ######################
         
@@ -221,23 +241,6 @@ class Window(tk.Frame):
         #self.UtilLabel = tk.Label(self.UtilFrame,text="Utilities")
         #self.UtilLabel.pack(side="top")
         
-        
-        #Create untility tabs
-        self.UtilTabs = ttk.Notebook(self.UtilFrame,height = 100,width = 595)
-        self.UtilTabs.pack(side="bottom")
-        self.utilTabModules = {}
-        
-        #Add tabs to the utility tab wigdet
-        self.FileUtiltab = Utility.FileUtil.Util(self.UtilTabs)
-        self.utilTabModules[self.FileUtiltab.name] = self.FileUtiltab
-        #self.CreateFileUtilTab()
-        
-        self.GraphUtilTab = Utility.GraphUtil.Util(self.UtilTabs)
-        self.utilTabModules[self.GraphUtilTab.name] = self.GraphUtilTab
-        #self.CreateGraphUtilTab()
-        
-        self.SetupUtilTabs(setupFilename)
-        
 
         
         self.UpdateWindow()
@@ -280,7 +283,14 @@ class Window(tk.Frame):
         else:
             self.IndicatorLabel["image"] = self.Icons["IDLE"]
         
-        self.UpdateGraph()
+        
+        if self.GraphUtilTab.CurrentGraph ==  self.GraphUtilTab.GraphSelectOption.get():
+            self.UpdateGraph()
+            self.canvas.draw()
+        else:
+            #re create graph is new graph type
+            self.GraphUtilTab.CurrentGraph = self.GraphUtilTab.GraphSelectOption.get()
+            self.CreateGraph()
         
         self.after(250,self.UpdateWindow)
     
@@ -383,91 +393,37 @@ class Window(tk.Frame):
         """
         
         #self.Data = [[0,0e-5,0e-5],[1,1e-5,1e-5],[2,2e-5,4e-5],[3,3e-5,9e-5],[4,4e-5,16e-5]]
-        self.Data = []
-        self.xData = []
-        self.y1Data = []
-        self.y2Data = []
         
-        self.fig = Figure(figsize=(width, Height), dpi=100)
-        self.fig.set_facecolor("white")
+        #Create figure to place in widget
+        self.GraphUtilTab.CreateGraph()
         
-        self.ax = self.fig.add_subplot(111)
-        self.axtwin = self.ax.twinx()
+        self.fig = self.GraphUtilTab.fig
+#        self.Plot1 = self.GraphUtilTab.Plot1
+#        self.Plot2 = self.GraphUtilTab.Plot2
+#        self.ax = self.GraphUtilTab.ax
+#        self.axtwin = self.GraphUtilTab.axtwin
+        try:
+            self.GraphFrameInner.destroy()
+            self.update()
+        except:
+            pass
         
-        self.Plot1, = self.ax.plot(self.xData, self.y1Data,"#000000",antialiased=False,linewidth=0.5)
-        self.Plot2, = self.axtwin.plot(self.xData,self.y2Data,"#E69F00",antialiased=False,linewidth=0.5)
+        self.GraphFrameInner = tk.Frame(self.GraphFrame)
+        self.GraphFrameInner.pack()
         
-        self.ax.set_facecolor("white")
-        self.ax.grid(color="grey")
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.GraphFrameInner)  # A tk.DrawingArea.
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         
-        self.ax.tick_params(axis='y', colors='#000000')
-        self.axtwin.tick_params(axis='y', colors='#E69F00')
-        
-        #self.ax.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
-        #self.axtwin.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
-        
-        formatter = ticker.ScalarFormatter(useMathText=True)
-        formatter.set_scientific(True) 
-        formatter.set_powerlimits((-2,2))
-        
-        self.ax.yaxis.set_major_formatter(formatter)
-        self.axtwin.yaxis.set_major_formatter(formatter)
-        
-        canvas = FigureCanvasTkAgg(self.fig, master=self.GraphFrame)  # A tk.DrawingArea.
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        
-        toolbar = NavigationToolbar2Tk(canvas, self.GraphFrame)
+        toolbar = NavigationToolbar2Tk(self.canvas, self.GraphFrameInner)
         toolbar.update()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
     def UpdateGraph(self):
+        """Update the graph widget with the latest data, using the selected settings
+        """
         
-        try:
-            
-            xAxisSel = int(self.GraphUtilTab.XaxisEntry.get())
-            Str = self.GraphUtilTab.Y1axisEntry.get()
-            y1AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
-            Str = self.GraphUtilTab.Y2axisEntry.get()
-            y2AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
-            
-            xData = [float(i[xAxisSel]) for i in self.Data]
-            
-            y1Data = []
-            for Sel in y1AxisSel:
-                y1Data.append([float(i[Sel]) for i in self.Data])
-        
-            y2Data = []
-            for Sel in y2AxisSel:
-                y2Data.append([float(i[Sel]) for i in self.Data])
-            
-        except Exception as e:
-            
-            print(e)
-            
-            xAxisSel = 0
-            y1AxisSel = 1
-            y2AxisSel = 2
-            print("Invalid column selection")
-            return
-        
-        self.Plot1.set_xdata(xData)
-        self.Plot1.set_ydata(y1Data[0])
-        self.Plot2.set_xdata(xData)
-        self.Plot2.set_ydata(y2Data[0])
-        
-#        self.Plot1.set_data(*y1Data)
-#        self.Plot2.set_data(*y2Data)
-        
-        if bool(self.GraphUtilTab.Autoscale.get()):
-            try:
-                self.ax.relim()
-                self.ax.autoscale()
-                self.axtwin.relim()
-                self.axtwin.autoscale()
-            except Exception as e:
-                print("Couldn't autosclae graph")
-                print(e)
+        self.GraphUtilTab.UpdateGraph(self.Data)
         
         try:
             self.fig.canvas.draw()
