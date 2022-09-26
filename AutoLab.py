@@ -286,7 +286,6 @@ class Window(tk.Frame):
         
         if self.GraphUtilTab.CurrentGraph ==  self.GraphUtilTab.GraphSelectOption.get():
             self.UpdateGraph()
-            self.canvas.draw()
         else:
             #re create graph is new graph type
             self.GraphUtilTab.CurrentGraph = self.GraphUtilTab.GraphSelectOption.get()

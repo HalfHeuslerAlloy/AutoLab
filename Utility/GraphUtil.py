@@ -272,7 +272,8 @@ class Util(tk.Frame):
                     self.Plot2D.autoscale()
                     self.Plot2D.set_extent([minY,maxY,
                                             minX,maxX])
-                    
+    
+                    self.ax.relim()
                     self.ax.autoscale()
                     
                 except Exception as e:
@@ -319,6 +320,10 @@ class Util(tk.Frame):
             deltaY = abs(max(dataY[1:] - dataY[:-1]))
             nY = round( (maxY-minY)/deltaY ) + 1
         
+        if nX*nY>1000000:
+            print("2D plot is too large, number of cells greater that 1,000,000")
+            return np.array([[0]])
+        
         #make array
         meshgrid = np.zeros([int(nX),int(nY)])
         
@@ -328,9 +333,10 @@ class Util(tk.Frame):
             y = dataY[i]
             z = dataZ[i]
             
-            iX = int(nX-1) - int( (x-minX)/deltaX )
-            iY = int( (y-minY)/deltaY )
+            iX = int(nX-1) - int(round( (x-minX)/deltaX ))
+            iY = int(round((y-minY)/deltaY ))
             
+            #print(nX,nY,iX,iY)
             
             meshgrid[iX,iY] = z
         
