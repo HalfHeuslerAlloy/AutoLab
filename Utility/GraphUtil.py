@@ -270,8 +270,8 @@ class Util(tk.Frame):
                         maxY = 1
                     
                     self.Plot2D.autoscale()
-                    self.Plot2D.set_extent([minY,maxY,
-                                            minX,maxX])
+                    self.Plot2D.set_extent([minX,maxX,
+                                            minY,maxY])
     
                     self.ax.relim()
                     self.ax.autoscale()
@@ -325,7 +325,7 @@ class Util(tk.Frame):
             return np.array([[0]])
         
         #make array
-        meshgrid = np.zeros([int(nX),int(nY)])
+        meshgrid = np.zeros([int(nY),int(nX)])
         
         #Move Z data to meshgrid
         for i in range(len(dataZ)):
@@ -333,12 +333,12 @@ class Util(tk.Frame):
             y = dataY[i]
             z = dataZ[i]
             
-            iX = int(nX-1) - int(round( (x-minX)/deltaX ))
-            iY = int(round((y-minY)/deltaY ))
+            iX = int(round( (x-minX)/deltaX ))
+            iY = int(nY-1) - int(round((y-minY)/deltaY ))
             
             #print(nX,nY,iX,iY)
             
-            meshgrid[iX,iY] = z
+            meshgrid[iY,iX] = z
         
         return meshgrid
             
