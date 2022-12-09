@@ -13,3 +13,5 @@ from .DSP_7265 import *
 from .Keithley2400 import *
 from .DSP_7280 import *
 from .IPS120 import *
+from .SMS120C import *
+from .Arroyo4300 import *

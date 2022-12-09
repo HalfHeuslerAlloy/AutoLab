@@ -16,3 +16,4 @@ from .TestUtil import *
 from .TimeUtil import *
 
 from .IPSMagUtil import *
+from .SMSMagUtil import *
