@@ -1,5 +1,5 @@
 test.txt
 Setup.txt
 __pycache__/
-Workers/Users/.
+Workers/Users/
 !Workers/Users/Example
