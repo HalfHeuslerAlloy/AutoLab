@@ -62,6 +62,12 @@ class Util(tk.Frame):
                                               variable=self.delimiterOption,
                                               value=",")
         CommaOptionOption.pack(anchor="w")
+        
+        TabOptionOption = ttk.Radiobutton(DelimiterFrame,
+                                              text="Tabs",
+                                              variable=self.delimiterOption,
+                                              value="\t")
+        TabOptionOption.pack(anchor="w")
 
 
 if __name__=="__main__":
