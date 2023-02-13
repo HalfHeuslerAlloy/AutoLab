@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 class DSP_7265(object):
     def __init__(self,rm, GPIB_Address, RemoteOnly = False):
@@ -120,6 +121,10 @@ class DSP_7265(object):
     #TC. reads the time constant in seconds TC (no full stop) reads the corresponding code
     TC = property(__getTC, setTC, None, "Filter Time Constant.")
     
+    def getTCons (self):
+        return(self.VI.query('TC'))#gets the code for easier meshing with formatting. 
+    #Basically, if somoene sets a 1Ks TC, writing that as 1000 will be nasty.
+    
     def setSEN(self, vSen):
         """ Sets the Full Scale Sensitivity.
         
@@ -187,6 +192,10 @@ class DSP_7265(object):
     #SEN. reads the senitivity in the relevant unit, based on the Input mode
     #SEN (no full stop) reads the corresponding code
     SEN = property(__getSEN, setSEN, None, "Full Scale Sensitivity.")
+    
+    def getSens(self):
+        return(self.VI.query('SEN'))
+    #for easier meshing with Lockins across different input modes. 
     
     def FilterSlope(self, sl):
         """Set the output filter slope.
@@ -373,7 +382,8 @@ class DSP_7265(object):
         n2- the value of the offset in %*100
 
         """
-        return(tuple(self.VI.query('XOF')))
+        string_Off=self.VI.query('XOF')
+        return(tuple(float(re.split(string_Off))))#Test this.
     
     def getYOff(self):
         """
@@ -384,7 +394,8 @@ class DSP_7265(object):
         n2- the value of the offset in %*100
 
         """
-        return(tuple(self.VI.query('YOF')))
+        string_Off=self.VI.query('YOF')
+        return(tuple(float(re.split(string_Off))))#Test this. 
     
     def Toggle_Offset(self, Toggle):
         """
@@ -441,7 +452,7 @@ class DSP_7265(object):
             self.VI.write('EX '+abs(int(Exp)))
             
     def getExp(self):
-        return(self.VI.query('EX'))        
+        return(float(self.VI.query('EX')))
         
     @property
     def X(self):

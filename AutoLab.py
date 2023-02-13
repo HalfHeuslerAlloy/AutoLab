@@ -440,7 +440,9 @@ class Window(tk.Frame):
         self.MeasWorkerFrame = tk.Frame(self.MeasTabs)
         self.MeasTabs.add(self.MeasWorkerFrame,text="Main Script")
 
-    
+    #TODO; Have Autolab pass the MeasTabs NOTEBOOK to the Worker Handler, Rather than a Frame
+    #In this way, Utils can be loaded into worker scripts and pass things (i.e Instrument names)
+    #easier to the Worker Pipe. Currently no real way to do this?
         
     def LoadMeasWorker(self):
         """

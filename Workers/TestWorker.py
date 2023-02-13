@@ -13,6 +13,7 @@ from multiprocessing import Process, Queue
 import sys
 sys.path.append("..")
 import Instruments as Inst
+import Utility
 
 import pyvisa
 
@@ -51,7 +52,9 @@ class Handler(tk.Frame):
         self.DwellEntry = tk.Entry(master,width = 10)
         self.DwellEntry.insert(tk.END,"0.1")
         self.DwellEntry.pack()
-
+        
+        
+        
         
     def Start(self,Pipe):
         

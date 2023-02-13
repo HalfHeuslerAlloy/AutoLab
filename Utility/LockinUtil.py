@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
+Utitily Tab for Configuring DSP_7265 Lockins
 Created on Thu Jul 21 16:02:22 2022
 
-@author: eenmv
+@author: eencsk
 """
 
 import tkinter as tk
@@ -21,11 +22,12 @@ class Util(tk.Frame):
     
     #Name of utility so it can e refer to later as part of a dictionary
     name = "Lockin"
+    
     Sensvalues=["2 nV/fA","5 nV/fA","10 nV/fA","20 nV/fA","50 nV/fA","100 nV/fA",
                 "200 nV/fA","500 nV/fA","1 uV/pA","2 uV/pA","5 uV/pA","10 uV/pA",
                 "20 uV/pA","50 uV/pA","100 uV/pA","200 uV/pA","500 uV/pA","1 mV/nA",
                 "2 mV/nA","5 mV/nA","10 mV/nA","20 mV/nA","50 mV/nA","100 mV/nA",
-                "200 mV/nA","500 mV/nA","1 V/uA"]
+                "200 mV/nA","500 mV/nA","1 V/uA"]#Doesnt include the Low-noise current settings. 
     
     TCvalues=["10 us","20 us","40 us","60 us","80 us","160 us","320 us","640 us",
               "5 ms","10 ms","20 ms","50 ms","100 ms","200 ms","500 ms","1 s",
@@ -35,6 +37,7 @@ class Util(tk.Frame):
     Off_and_Expo_Values=["Off","Offset X", "Offset Y", "Offset X and Y",
                          "Expand X", "Expand Y", "Expand X and Y", 
                          "Offset and Expand X", "Offset and Expand Y", "Offset and Expand X and Y"]
+    #No, I'm not making so you can Expand one Channel and Offset the other, are you MAD?
     def __init__(self, master):
 
         super().__init__(master)
@@ -61,7 +64,7 @@ class Util(tk.Frame):
         self.Sensitivity=tk.StringVar(LockinTabFrame,"Enter Sensitivity")
         self.SenEntry=tk.OptionMenu(LockinTabFrame, self.Sensitivity, *self.Sensvalues)
         #asterix is a packing argument, so will accept elements in array as seperate arguments
-        #rather than as a single "1 2 3 4" argument as will be the case 
+        #rather than as a single "1 2 3 4" argument as will be the case otherwise
         self.SenEntry.grid(column=2, row=0)
         ###TC GUI ELEMENT###
         TCEntryLabel = tk.Label(LockinTabFrame,text="Time Constant")
@@ -140,12 +143,12 @@ class Util(tk.Frame):
                 elif x==1:
                     lockin.setTC(str(TC_to_send))
                 elif x==2:
-                    if lockin.getXOff[0]==0:
+                    if lockin.getXOff()[0]==0.0:
                         lockin.setXOff(XOFF_to_send,False)
                     else:
                         lockin.setXOff(XOFF_to_send,True)
                 elif x==3:
-                    if lockin.getYOff[0]==0:
+                    if lockin.getYOff()[0]==0.0:
                         lockin.setYOff(YOFF_to_send,False)
                     else:
                         lockin.setYOff(YOFF_to_send,True)
@@ -183,10 +186,33 @@ class Util(tk.Frame):
             #given that kludge, may want to consider putting offset and expand on seperate
             #options, but Tab is cluttered as is!
             self.ApplyButton.configure(bg="green")
+            self.Export_config(lockin)
         except Exception as e:
             print(e)
             print("Failed to configure DSP 7265 Lockin")
             return False
+        rm.close()#cleanup
+        
+    def Export_config(self, Lockin_Manager):
+        #create Metadata String for Lockin
+        OutString=self.NameEntry.get()+","
+        OutString+="Sensitivity: "+self.Sensvalues[int(Lockin_Manager.getSens()-1)]
+        OutString+=","
+        OutString+="Time Constant: "+self.TCvalues[int(Lockin_Manager.getTCons())]
+        XOff=Lockin_Manager.getXOff()
+        YOff=Lockin_Manager.getXOff()
+        if  XOff[0]!=0.0:
+            OutString+=","
+            OutString+="X Offset On-Value: "+XOff[1]/100
+        if YOff[0]!=0.0:
+            OutString+=","
+            OutString+="Y Offset On-Value: "+YOff[1]/100
+        Exp=Lockin_Manager.getExp()
+        if Exp==1 or Exp==3:
+            OutString+=",XExpand x10"
+        if Exp==2 or Exp==3:
+            OutString+=",YExpand x10"
+        
         
         
         #self.after(250,self.update)
