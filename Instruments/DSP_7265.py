@@ -385,6 +385,40 @@ class DSP_7265(object):
 
         """
         return(tuple(self.VI.query('YOF')))
+    
+    def Toggle_Offset(self, Toggle):
+        """
+        Toggle The Offsets on/off
+
+        Parameters
+        ----------
+        Toggle : INT
+            Offsets to turn on. Code:
+                0 - Offset off
+                1 - Offset X Channel
+                2 - Offset Y Channel
+                3 - Offset both X and Y
+
+
+        """
+        if abs(int(Toggle)) > 3:
+            raise ValueError("Not a Valid Offset Input")
+        else:
+            if Toggle==0:
+                self.VI.write('XOF 0')
+                self.VI.write('YOF 0')
+            elif Toggle==1:
+                self.VI.write('XOF 1')
+                self.VI.write('YOF 0')
+                
+            elif Toggle==2:
+                self.VI.write('XOF 0')
+                self.VI.write('YOF 1')
+                
+            elif Toggle==3:
+                self.VI.write('XOF 1')
+                self.VI.write('YOF 1')
+
    
     def setExp(self, Exp):
         """

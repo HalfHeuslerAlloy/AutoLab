@@ -151,48 +151,34 @@ class Util(tk.Frame):
                         lockin.setYOff(YOFF_to_send,True)
                 elif x==4:#WARNING! COLLAPSE THIS OR GAZE INTO SATAN'S ELIF STATEMENTS
                     if ApplyExpands==0:
-                        lockin.VI.write("XOF 0")
-                        lockin.VI.write("YOF 0")
-                        #easiest way I could think of to turn off the offsets 
-                        #without modifying them through the setZOff commands
+                        lockin.Toggle_Offset(0)
                         lockin.setExp(0)
                     elif ApplyExpands==1:
-                        lockin.VI.write("XOF 1")
-                        lockin.VI.write("YOF 0")
+                        lockin.Toggle_Offset(1)
                         lockin.setExp(0)
-                    
                     elif ApplyExpands==2:
-                        lockin.VI.write("XOF 0")
-                        lockin.VI.write("YOF 1")
+                        lockin.Toggle_Offset(2)
                         lockin.setExp(0)
-                        
                     elif ApplyExpands==3:
-                        lockin.VI.write("XOF 1")
-                        lockin.VI.write("YOF 1")
+                        lockin.Toggle_Offset(3)
                         lockin.setExp(0)
                     elif ApplyExpands==4:
-                        lockin.VI.write("XOF 0")
-                        lockin.VI.write("YOF 0")
+                        lockin.Toggle_Offset(0)
                         lockin.setExp(1)
                     elif ApplyExpands==5:
-                        lockin.VI.write("XOF 0")
-                        lockin.VI.write("YOF 0")
+                        lockin.Toggle_Offset(0)
                         lockin.setExp(2)
                     elif ApplyExpands==6:
-                        lockin.VI.write("XOF 0")
-                        lockin.VI.write("YOF 0")
+                        lockin.Toggle_Offset(0)
                         lockin.setExp(3)
                     elif ApplyExpands==7:
-                        lockin.VI.write("XOF 1")
-                        lockin.VI.write("YOF 0")
+                        lockin.Toggle_Offset(1)
                         lockin.setExp(1)
                     elif ApplyExpands==8:
-                        lockin.VI.write("XOF 0")
-                        lockin.VI.write("YOF 1")
+                        lockin.Toggle_Offset(2)
                         lockin.setExp(2)
                     elif ApplyExpands==9:
-                        lockin.VI.write("XOF 1")
-                        lockin.VI.write("YOF 1")
+                        lockin.Toggle_Offset(3)
                         lockin.setExp(3)
             #given that kludge, may want to consider putting offset and expand on seperate
             #options, but Tab is cluttered as is!
