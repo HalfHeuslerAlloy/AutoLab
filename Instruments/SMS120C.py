@@ -5,6 +5,8 @@ Created on Mon Nov  7 11:42:47 2022
 @author: eenmv
 """
 
+import time
+
 class SMS120C:
     def __init__(self,rm,Channel):
         """
@@ -198,10 +200,13 @@ class SMS120C:
         """
         Turns on/off heater
         """
-        if heating == True:
-            self.inst.write("H 1") 
-        elif heating == False:
-            self.inst.write("H 0")
+        
+        if heating:
+            print("Turning heater on")
+            self.inst.query("H 1")
+        else:
+            print("Turning heater off")
+            self.inst.query("H 0")
         self.inst.clear()
     
     def toggle_tesla(self,tesla):
@@ -212,6 +217,7 @@ class SMS120C:
             self.inst.write("T 1") 
         elif tesla == False:
             self.inst.write("T 0")
+        time.sleep(0.1)
         self.inst.clear()
     
     def toggle_direction(self,direction):
@@ -234,12 +240,12 @@ class SMS120C:
             print(e)
     
     def set_max(self, field):
-        self.inst.write("S ! {:.3f}".format(field))
+        self.inst.query("S ! {:.3f}".format(field))
         self.inst.clear()
     
     def set_ramp(self,ramp_rate):
         #rate in amps/hour
-        self.inst.write("S R {:.3f}".format(ramp_rate))
+        self.inst.query("S R {:.3f}".format(ramp_rate))
         self.inst.clear()
     
 #    def set_limit(self,limit):
