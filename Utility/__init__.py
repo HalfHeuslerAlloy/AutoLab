@@ -17,3 +17,5 @@ from .TimeUtil import *
 
 from .IPSMagUtil import *
 from .SMSMagUtil import *
+
+from .LockinUtil import *

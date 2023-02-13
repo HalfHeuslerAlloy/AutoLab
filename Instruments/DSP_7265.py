@@ -111,6 +111,7 @@ class DSP_7265(object):
             print('EG&G 7265 Lock-In Wrong Time Constant Code')
     def __getTC(self):
         return float(self.VI.query('TC.'))
+    #TC. reads the time constant in seconds TC (no full stop) reads the corresponding code
     TC = property(__getTC, setTC, None, "Filter Time Constant.")
     
     def setSEN(self, vSen):
@@ -177,6 +178,8 @@ class DSP_7265(object):
             print('EG&G 7265 Lock-In Wrong Scale Sensitivity Code')
     def __getSEN(self):
         return float(self.VI.query('SEN.'))
+    #SEN. reads the senitivity in the relevant unit, based on the Input mode
+    #SEN (no full stop) reads the corresponding code
     SEN = property(__getSEN, setSEN, None, "Full Scale Sensitivity.")
     
     def FilterSlope(self, sl):
@@ -334,7 +337,72 @@ class DSP_7265(object):
             self.VI.write('ACGAIN ' + AcGain)
         else:
             print('EG&G 7265 Lock-In Wrong AcGain Code')
+    
+    def setXoff(self, Offset, Enable):
+        """Sets the Offset in % on the X channel and toggles with Enable"""
+        off_to_send=int(Offset*100)#rounds the offset in % to the integer to send
+        if abs(off_to_send) > 300:
+            raise ValueError("Offset out of 300% max range")
+        elif Enable == True:
+            self.VI.write('XOF 1 '+off_to_send)
+        elif Enable == False:
+            self.VI.write('XOF 0 '+off_to_send)
+    
+    def setYoff(self, Offset, Enable):
+        """Sets the Offset in % on the Y channel and toggles with Enable"""
+        off_to_send=int(Offset*100)#rounds the offset in % to the integer to send
+        if abs(off_to_send) > 30000:
+            raise ValueError("Offset out of 300% max range")
+        elif Enable == True:
+            self.VI.write('YOF 1 '+off_to_send)
+        elif Enable == False:
+            self.VI.write('YOF 0 '+off_to_send)
             
+    def getXOff(self):
+        """
+
+        Returns
+        -------
+        A tuple of values n1,n2. n1= 0 or 1, whether or not the X-offset is enabled
+        n2- the value of the offset in %*100
+
+        """
+        return(tuple(self.VI.query('XOF')))
+    
+    def getYOff(self):
+        """
+
+        Returns
+        -------
+        A tuple of values n1,n2. n1= 0 or 1, whether or not the y-offset is enabled
+        n2- the value of the offset in %*100
+
+        """
+        return(tuple(self.VI.query('YOF')))
+   
+    def setExp(self, Exp):
+        """
+        Set the expand of the lockin. Always x10.
+
+        Parameters
+        ----------
+        Exp : INT
+            Expand to turn on. Code:
+                0 - Expand off
+                1 - Expand X Channel
+                2 - Expand Y Channel
+                3 - Expand both X and Y
+
+
+        """
+        if abs(int(Exp)) > 3:
+            raise ValueError("Not a Valid Expand Input")
+        else:
+            self.VI.write('EX '+abs(int(Exp)))
+            
+    def getExp(self):
+        return(self.VI.query('EX'))        
+        
     @property
     def X(self):
         """Returns X component of lock-in measure."""

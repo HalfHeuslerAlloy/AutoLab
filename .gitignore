@@ -3,3 +3,4 @@ Setup.txt
 __pycache__/
 Workers/Users/
 !Workers/Users/Example
+*.txt

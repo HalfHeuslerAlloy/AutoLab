@@ -127,3 +127,16 @@ class lakeshore350(object):
         """
         
         self.inst.write("OUTMODE {0:0.0f},{1:0.0f},{2:0.0f},{3:0.0f}".format(N,Mode,Input,Powerup))
+        
+    def allOff(self):
+        """
+        Parameters:
+            None
+        desc:
+            Uses getOutput mode to get all parameters of all channels then sets the output mode to 
+            0, turning all heaters off.
+        """
+        for N in range (0,1):
+            Mode,Input,Powerup=self.getOutputMode(N)
+            self.setOutputMode(N, 0, Input, Powerup)
+            

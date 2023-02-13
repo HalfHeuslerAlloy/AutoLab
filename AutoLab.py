@@ -193,6 +193,7 @@ class Window(tk.Frame):
         self.CreateMeasTab()
         
         self.SetupInstruments(setupFilename)
+        
 
         
         
@@ -438,6 +439,7 @@ class Window(tk.Frame):
         """
         self.MeasWorkerFrame = tk.Frame(self.MeasTabs)
         self.MeasTabs.add(self.MeasWorkerFrame,text="Main Script")
+
     
         
     def LoadMeasWorker(self):
