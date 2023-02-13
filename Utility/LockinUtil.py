@@ -51,30 +51,157 @@ class Util(tk.Frame):
         rm=pyvisa.ResourceManager()
         addresses=rm.list_resources()
         rm.close()
-        Com=tk.StringVar(LockinTabFrame,"GPIB Address")
-        self.ComEntry=tk.OptionMenu(LockinTabFrame,Com,*addresses)
+        self.Com=tk.StringVar(LockinTabFrame,"GPIB Address")
+        self.ComEntry=tk.OptionMenu(LockinTabFrame,self.Com,*addresses)
         self.ComEntry.grid(column=0,row=1)
         
         ###SENSITIVITY GUI ELEMENT###
         SenEntryLabel = tk.Label(LockinTabFrame,text="Sensitivity")
         SenEntryLabel.grid(column=1, row=0)
-        Sensitivity=tk.StringVar(LockinTabFrame,"Enter Sensitivity")
-        self.SenEntry=tk.OptionMenu(LockinTabFrame, Sensitivity, *self.Sensvalues)
+        self.Sensitivity=tk.StringVar(LockinTabFrame,"Enter Sensitivity")
+        self.SenEntry=tk.OptionMenu(LockinTabFrame, self.Sensitivity, *self.Sensvalues)
         #asterix is a packing argument, so will accept elements in array as seperate arguments
         #rather than as a single "1 2 3 4" argument as will be the case 
         self.SenEntry.grid(column=2, row=0)
         ###TC GUI ELEMENT###
         TCEntryLabel = tk.Label(LockinTabFrame,text="Time Constant")
         TCEntryLabel.grid(column=1, row=1)
-        TC=tk.StringVar(LockinTabFrame,"Enter Time Constant")
-        self.TCEntry=tk.OptionMenu(LockinTabFrame, TC, *self.TCvalues)
+        self.TC=tk.StringVar(LockinTabFrame,"Enter Time Constant")
+        self.TCEntry=tk.OptionMenu(LockinTabFrame, self.TC, *self.TCvalues)
         self.TCEntry.grid(column=2, row=1)
+        ###OFFSET GUI ELEMENTS###
+        self.XOFFEntry = tk.Entry(LockinTabFrame,width = 10)
+        self.XOFFEntry.insert(tk.END,"X-Offset(%)")
+        self.XOFFEntry.grid(column=4, row=0)
+        self.YOFFEntry = tk.Entry(LockinTabFrame,width = 10)
+        self.YOFFEntry.insert(tk.END,"Y-Offset(%)")
+        self.YOFFEntry.grid(column=4, row=1)
+        self.Offset_option=tk.StringVar(LockinTabFrame,"Set Offset Enable")
+        self.SetOffset_Menu=tk.OptionMenu(LockinTabFrame, self.Offset_option, *self.Off_and_Expo_Values)
+        self.SetOffset_Menu.grid(column=4,row=2)
         
-    
+        self.ApplyButton = tk.Button(LockinTabFrame,
+                                         text = "Configure Now",
+                                         bg = "red",
+                                         command = self.configure,
+                                         )
+        self.ApplyButton.grid(column = 0, row = 2)
+        
         self.update()
-    
-    def update(self):
-        pass
+    #TODO: Write in a seperate "Connect" Button that populates the Menus Automatically
+    #For now, if a default option is selected in the drop-downs or no offset is entered, 
+    #The values will not be altered.
+    def configure(self):
+        rm=pyvisa.ResourceManager()
+        address=self.Com.get()
+        is_default=[True,True,True,True,True]
+        #list of bools to see if we need to send values to the Lockin
+        #Currently in the order Sensitivity,TC,XOffset,YOffset,EnableOffset/Expand.
+        #Feel Free to add more, but the list (and try/except statements) will need expanding.
+        #T=no need to update F=Parameter Needs Updating.
+        try:
+            sens_to_send=(self.Sensvalues.index(self.Sensitivity.get()))+1 
+            #for some reason, starts at 1, not 0
+            is_default[0]=False
+        except ValueError:
+            print("Did Not Update Sensitivity")
+        try:
+            TC_to_send=self.TCvalues.index(self.TC.get())
+            is_default[1]=False
+        except ValueError:
+            print("Did Not Update Time Constant")
+
+        try:
+            XOFF_to_send=float(self.XOFFEntry.get())
+            is_default[2]=False
+        except ValueError:
+            print("Did Not Update X-Offset")
+        
+        try:
+            YOFF_to_send=float(self.YOFFEntry.get())
+            is_default[3]=False
+        except ValueError:
+            print("Did Not Update Y-Offset")
+            
+        try:
+            ApplyExpands=self.Off_and_Expo_Values.index(self.Offset_option.get())
+            is_default[4]=False
+        except ValueError:
+            print("Did Not Change Offset/Expand Setting")    
+        
+        #ACTUAL CONNECTING TO THE INSTRUMENT SECTION
+        try:
+            lockin=Inst.DSP_7265(rm,address)
+            for x in range(0,len(is_default)):
+                if is_default[x] == True:
+                    pass# handles the not-updating
+                elif x==0:
+                    lockin.setSen(str(sens_to_send))
+                elif x==1:
+                    lockin.setTC(str(TC_to_send))
+                elif x==2:
+                    if lockin.getXOff[0]==0:
+                        lockin.setXOff(XOFF_to_send,False)
+                    else:
+                        lockin.setXOff(XOFF_to_send,True)
+                elif x==3:
+                    if lockin.getYOff[0]==0:
+                        lockin.setYOff(YOFF_to_send,False)
+                    else:
+                        lockin.setYOff(YOFF_to_send,True)
+                elif x==4:#WARNING! COLLAPSE THIS OR GAZE INTO SATAN'S ELIF STATEMENTS
+                    if ApplyExpands==0:
+                        lockin.VI.write("XOF 0")
+                        lockin.VI.write("YOF 0")
+                        #easiest way I could think of to turn off the offsets 
+                        #without modifying them through the setZOff commands
+                        lockin.setExp(0)
+                    elif ApplyExpands==1:
+                        lockin.VI.write("XOF 1")
+                        lockin.VI.write("YOF 0")
+                        lockin.setExp(0)
+                    
+                    elif ApplyExpands==2:
+                        lockin.VI.write("XOF 0")
+                        lockin.VI.write("YOF 1")
+                        lockin.setExp(0)
+                        
+                    elif ApplyExpands==3:
+                        lockin.VI.write("XOF 1")
+                        lockin.VI.write("YOF 1")
+                        lockin.setExp(0)
+                    elif ApplyExpands==4:
+                        lockin.VI.write("XOF 0")
+                        lockin.VI.write("YOF 0")
+                        lockin.setExp(1)
+                    elif ApplyExpands==5:
+                        lockin.VI.write("XOF 0")
+                        lockin.VI.write("YOF 0")
+                        lockin.setExp(2)
+                    elif ApplyExpands==6:
+                        lockin.VI.write("XOF 0")
+                        lockin.VI.write("YOF 0")
+                        lockin.setExp(3)
+                    elif ApplyExpands==7:
+                        lockin.VI.write("XOF 1")
+                        lockin.VI.write("YOF 0")
+                        lockin.setExp(1)
+                    elif ApplyExpands==8:
+                        lockin.VI.write("XOF 0")
+                        lockin.VI.write("YOF 1")
+                        lockin.setExp(2)
+                    elif ApplyExpands==9:
+                        lockin.VI.write("XOF 1")
+                        lockin.VI.write("YOF 1")
+                        lockin.setExp(3)
+            #given that kludge, may want to consider putting offset and expand on seperate
+            #options, but Tab is cluttered as is!
+            self.ApplyButton.configure(bg="green")
+        except Exception as e:
+            print(e)
+            print("Failed to configure DSP 7265 Lockin")
+            return False
+        
         
         #self.after(250,self.update)
 

@@ -11,12 +11,18 @@ class DSP_7265(object):
         
         Parameters
         ----------
-        GPIB_Address : int, optional
+        GPIB_Address : int or Str, optional
             GPIB Address of device.
+            If int, just the GPIB address, if Str, the full GPIB address, as pulled from
+            rm.list_resources().
         RemoteOnly : bool, optional
             Control remotely (T) or not (F).
         """
-        self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
+        if type(GPIB_Address) != type(" "):
+            self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
+        else:
+            self.VI = rm.open_resource(GPIB_Address)
+            
         self.VI.write_termination = self.VI.CR
         self.VI.read_termination = self.VI.CR
         #self.VI = visa.instrument('GPIB0::' + str(GPIB_Address))
