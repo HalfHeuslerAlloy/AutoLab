@@ -32,7 +32,7 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 from matplotlib import ticker
-
+import re
 
 import numpy as np
 import sys
@@ -437,12 +437,9 @@ class Window(tk.Frame):
     def CreateMeasTab(self):
         """Simply generates the measurement tab and add pages to it
         """
-        self.MeasWorkerFrame = tk.Frame(self.MeasTabs)
-        self.MeasTabs.add(self.MeasWorkerFrame,text="Main Script")
+        #self.MeasWorkerFrame = tk.Frame(self.MeasTabs)
+        #self.MeasTabs.add(self.MeasWorkerFrame,text="Main Script")
 
-    #TODO; Have Autolab pass the MeasTabs NOTEBOOK to the Worker Handler, Rather than a Frame
-    #In this way, Utils can be loaded into worker scripts and pass things (i.e Instrument names)
-    #easier to the Worker Pipe. Currently no real way to do this?
         
     def LoadMeasWorker(self):
         """
@@ -454,13 +451,15 @@ class Window(tk.Frame):
         
         #DESTROY this previous wokerframe if it exist
         try:
-            self.WorkerFrame.destroy()
+            self.WorkerBook.destroy()
             self.update()   
         except:
             pass
         
-        self.WorkerFrame = tk.Frame(self.MeasWorkerFrame)
-        self.WorkerFrame.grid(column=0, row=1, columnspan=3, rowspan=3)
+        self.WorkerBook = ttk.Notebook(self.MeasTabs,height = 330,width = 480)
+        #as before, creates a holder-frame that can be destroyed while keeping the overall archetecture intact
+        self.WorkerBook.pack(side="bottom")
+        
         
         #Get filename of Expirement GUI and worker
         filename = fd.askopenfile(initialdir = os.getcwd()+"\\Workers") #Open dialog box at desired folder
@@ -485,11 +484,9 @@ class Window(tk.Frame):
         for module in modules[1:]:
             self.MeasWorkerScript = getattr(self.MeasWorkerScript, module)
         
-        self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerFrame)
+        self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerBook)
         
-        self.MeasWorker = self.MeasWorkerScript.Worker
-        
-        
+        self.MeasWorker = self.MeasWorkerScript.Worker           
         
         print("Finished loading worker")
         
@@ -740,8 +737,22 @@ class Window(tk.Frame):
         #Inset header file here
         #Add current date and time if needed
         self.file.write(header.format( str(datetime.datetime.now() ).split(".")[0] ) )
-        self.file.write("\n#HeaderEnd\n\n")
-        
+        self.file.write("\n#HeaderEnd\n")
+        #write metadata
+        for key in self.WorkerBook.children.keys():
+            #iterate through all children of the main WorkerBook and attempt to call Export_MetaData
+            #Export_MetaData should return a dictionary
+            #currently just write dictionary to file.
+            #TODO: Have metadata written to some other config file to be loaded on bootup
+            if re.search("frame", key)==None: 
+                #children includes the tk frames and the scripts within.
+                #we just want the scripts
+                try:
+                    self.file.write(str(self.WorkerBook.children[key].Export_MetaData()))
+                    self.file.write("\n")
+                except AttributeError:#Handle the case were no Export_Metadata method exists
+                    pass
+        self.file.write("\n#MetadataEnd\n\n")
         #return True for succesful file creation
         return True
         
@@ -815,4 +826,6 @@ if __name__=="__main__":
     root = tk.Tk()
     Experiment = Window(root,Resources)
     root.title("Autolab")
+
     Experiment.mainloop()
+    

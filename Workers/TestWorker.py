@@ -6,6 +6,7 @@ Created on Fri May  6 14:59:33 2022
 """
 
 import tkinter as tk
+from tkinter import ttk
 import time
 import numpy as np
 from multiprocessing import Process, Queue
@@ -17,7 +18,7 @@ import Utility
 
 import pyvisa
 
-class Handler(tk.Frame):
+class Handler(ttk.Notebook):
     """
     Measurement worker of the main AutoLab window
     """
@@ -28,28 +29,35 @@ class Handler(tk.Frame):
         super().__init__(master)
         
         self.Worker = None
+        self.MainFrame=tk.Frame(master)
+        self.MainFrame.grid(column=0, row=1, columnspan=3, rowspan=3)
         
-        StartEntryLabel = tk.Label(master,text="Start")
+        master.add(self.MainFrame,text="Main Script")
+        self.UtilTab1=Utility.TestUtil.Util(master,title="Test 1")#Calls the Relevant Util Tab and Adds to Master
+        self.UtilTab2=Utility.TestUtil.Util(master,title="Test 2")
+        #Duplicate Util tabs are a-Ok!, just make sure they're called something else
+        
+        StartEntryLabel = tk.Label(self.MainFrame,text="Start")
         StartEntryLabel.pack()
-        self.StartEntry = tk.Entry(master,width = 10)
+        self.StartEntry = tk.Entry(self.MainFrame,width = 10)
         self.StartEntry.insert(tk.END,"0")
         self.StartEntry.pack()
         
-        StopEntryLabel = tk.Label(master,text="Stop")
+        StopEntryLabel = tk.Label(self.MainFrame,text="Stop")
         StopEntryLabel.pack()
-        self.StopEntry = tk.Entry(master,width = 10)
+        self.StopEntry = tk.Entry(self.MainFrame,width = 10)
         self.StopEntry.insert(tk.END,"10")
         self.StopEntry.pack()
         
-        StepEntryLabel = tk.Label(master,text="Steps")
+        StepEntryLabel = tk.Label(self.MainFrame,text="Steps")
         StepEntryLabel.pack()
-        self.StepsEntry = tk.Entry(master,width = 10)
+        self.StepsEntry = tk.Entry(self.MainFrame,width = 10)
         self.StepsEntry.insert(tk.END,"100")
         self.StepsEntry.pack()
         
-        DwellEntryLabel = tk.Label(master,text="Dwell (s)")
+        DwellEntryLabel = tk.Label(self.MainFrame,text="Dwell (s)")
         DwellEntryLabel.pack()
-        self.DwellEntry = tk.Entry(master,width = 10)
+        self.DwellEntry = tk.Entry(self.MainFrame,width = 10)
         self.DwellEntry.insert(tk.END,"0.1")
         self.DwellEntry.pack()
         

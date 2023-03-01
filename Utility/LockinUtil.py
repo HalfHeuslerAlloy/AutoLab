@@ -93,7 +93,7 @@ class Util(tk.Frame):
         self.update()
     #TODO: Write in a seperate "Connect" Button that populates the Menus Automatically
     #For now, if a default option is selected in the drop-downs or no offset is entered, 
-    #The values will not be altered.
+    #The values will not be altered. BUT, Adrresses need to be set or everything Falls over.
     def configure(self):
         rm=pyvisa.ResourceManager()
         address=self.Com.get()
@@ -186,34 +186,49 @@ class Util(tk.Frame):
             #given that kludge, may want to consider putting offset and expand on seperate
             #options, but Tab is cluttered as is!
             self.ApplyButton.configure(bg="green")
-            self.Export_config(lockin)
         except Exception as e:
             print(e)
             print("Failed to configure DSP 7265 Lockin")
             return False
         rm.close()#cleanup
         
-    def Export_config(self, Lockin_Manager):
-        #create Metadata String for Lockin
-        OutString=self.NameEntry.get()+","
-        OutString+="Sensitivity: "+self.Sensvalues[int(Lockin_Manager.getSens()-1)]
-        OutString+=","
-        OutString+="Time Constant: "+self.TCvalues[int(Lockin_Manager.getTCons())]
+    def Export_MetaData(self):
+        """
+        Creates a Metadata Dictionary for the Lockin.
+        NOTE: CURRENTLY ADDRESS HAS TO BE SET CORRECTLY. IF NOT THEN THIS, AND ALL THINGS
+        WILL FALL OVER
+            
+        Returns:
+            Metadata: A Dictionary of Metadata values.
+        """
+        rm=pyvisa.ResourceManager()
+        address=self.Com.get()
+        Lockin_Manager=Inst.DSP_7265(rm,address)
+        #create Metadata Dictionary
+        Metadata={}
+        Metadata["Name"]=self.NameEntry.get
+        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens()-1)]
+        Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]
         XOff=Lockin_Manager.getXOff()
         YOff=Lockin_Manager.getXOff()
+        Phas=Lockin_Manager.getRefPhase()
         if  XOff[0]!=0.0:
-            OutString+=","
-            OutString+="X Offset On-Value: "+XOff[1]/100
+            Metadata["XOffset"]=XOff[1]/100
         if YOff[0]!=0.0:
-            OutString+=","
-            OutString+="Y Offset On-Value: "+YOff[1]/100
+            Metadata["YOffset"]=YOff[1]/100
+        if Phas != 0:
+            Metadata["PhaseOffset"]=Phas
         Exp=Lockin_Manager.getExp()
         if Exp==1 or Exp==3:
-            OutString+=",XExpand x10"
+            Metadata["XExpand"]=True
+        else:
+            Metadata["XExpand"]=False
         if Exp==2 or Exp==3:
-            OutString+=",YExpand x10"
+            Metadata["YExpand"]=True
+        else:
+            Metadata["YExpand"]=False
         
-        
+        return(Metadata)
         
         #self.after(250,self.update)
 
