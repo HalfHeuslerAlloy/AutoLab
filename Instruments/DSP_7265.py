@@ -383,7 +383,10 @@ class DSP_7265(object):
 
         """
         string_Off=self.VI.query('XOF')
-        return(tuple(float(re.split(string_Off))))#Test this.
+        list_Off=re.split(",",string_Off)
+        
+        #has to be done beforehand because string comprehension is hard
+        return(tuple(float(i) for i in list_Off))#Test this.
     
     def getYOff(self):
         """
@@ -395,7 +398,10 @@ class DSP_7265(object):
 
         """
         string_Off=self.VI.query('YOF')
-        return(tuple(float(re.split(string_Off))))#Test this. 
+        list_Off=re.split(",",string_Off)
+        
+        #has to be done beforehand because string comprehension is hard
+        return(tuple(float(i) for i in list_Off)) 
     
     def Toggle_Offset(self, Toggle):
         """

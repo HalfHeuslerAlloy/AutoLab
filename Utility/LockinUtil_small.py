@@ -33,6 +33,7 @@ class Util(tk.Frame):
               "5 ms","10 ms","20 ms","50 ms","100 ms","200 ms","500 ms","1 s",
               "2 s","5 s","10 s","20 s","50 s","100 s","200 s","500 s","1 Ks",
               "2 Ks","5 Ks","10 Ks","20 Ks","50 Ks","100 Ks"]
+    #TODO: Check these against the manual, they are wrong.
     
     Off_and_Expo_Values=["Off","Offset X", "Offset Y", "Offset X and Y",
                          "Expand X", "Expand Y", "Expand X and Y", 
@@ -139,7 +140,7 @@ class Util(tk.Frame):
                 if is_default[x] == True:
                     pass# handles the not-updating
                 elif x==0:
-                    lockin.setSen(str(sens_to_send))
+                    lockin.setSEN(str(sens_to_send))
                 elif x==1:
                     lockin.setTC(str(TC_to_send))
                 elif x==2:
@@ -206,8 +207,8 @@ class Util(tk.Frame):
         Lockin_Manager=Inst.DSP_7265(rm,address)
         #create Metadata Dictionary
         Metadata={}
-        Metadata["Name"]=self.NameEntry.get
-        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens()-1)]
+        Metadata["Name"]=self.NameEntry.get()
+        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens())-1]
         Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]
         XOff=Lockin_Manager.getXOff()
         YOff=Lockin_Manager.getXOff()

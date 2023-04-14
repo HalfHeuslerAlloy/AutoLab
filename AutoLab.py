@@ -729,7 +729,7 @@ class Window(tk.Frame):
                 
                 filenamePath = enumFilename
                 
-                print("made file with number: ".format(N))
+                print("made file with number: {}".format(N))
                 self.file = open(filenamePath,"w")
                 self.file.seek(0)
                 self.file.truncate()
@@ -739,19 +739,25 @@ class Window(tk.Frame):
         self.file.write(header.format( str(datetime.datetime.now() ).split(".")[0] ) )
         self.file.write("\n#HeaderEnd\n")
         #write metadata
+
         for key in self.WorkerBook.children.keys():
-            #iterate through all children of the main WorkerBook and attempt to call Export_MetaData
-            #Export_MetaData should return a dictionary
-            #currently just write dictionary to file.
-            #TODO: Have metadata written to some other config file to be loaded on bootup
-            if re.search("frame", key)==None: 
-                #children includes the tk frames and the scripts within.
-                #we just want the scripts
-                try:
-                    self.file.write(str(self.WorkerBook.children[key].Export_MetaData()))
-                    self.file.write("\n")
-                except AttributeError:#Handle the case were no Export_Metadata method exists
-                    pass
+            print(key)
+            try:
+                #iterate through all children of the main WorkerBook and attempt to call Export_MetaData
+                #Export_MetaData should return a dictionary
+                #currently just write dictionary to file.
+                #TODO: Have metadata written to some other config file to be loaded on bootup
+                if re.search("frame", key)==None: 
+                    #children includes the tk frames and the scripts within.
+                    #we just want the scripts
+                    try:
+                        self.file.write(str(self.WorkerBook.children[key].Export_MetaData()))
+                        self.file.write("\n")
+                        
+                    except AttributeError:#Handle the case were no Export_Metadata method exists
+                        pass
+            except Exception as e:
+                print(e)
         self.file.write("\n#MetadataEnd\n\n")
         #return True for succesful file creation
         return True

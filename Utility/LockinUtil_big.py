@@ -141,7 +141,7 @@ class Util(tk.Frame):
                 if is_default[x] == True:
                     pass# handles the not-updating
                 elif x==0:
-                    lockin.setSen(str(sens_to_send))
+                    lockin.setSEN(str(sens_to_send))
                 elif x==1:
                     lockin.setTC(str(TC_to_send))
                 elif x==2:
@@ -208,8 +208,8 @@ class Util(tk.Frame):
         Lockin_Manager=Inst.DSP_7265(rm,address)
         #create Metadata Dictionary
         Metadata={}
-        Metadata["Name"]=self.NameEntry.get
-        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens()-3)]
+        Metadata["Name"]=self.NameEntry.get()
+        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens())-3]
         Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]
         XOff=Lockin_Manager.getXOff()
         YOff=Lockin_Manager.getXOff()

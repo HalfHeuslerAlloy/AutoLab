@@ -24,7 +24,10 @@ class DSP_7280(object):
         RemoteOnly : bool, optional
             Control remotely (T) or not (F).
         """
-        self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
+        if type(GPIB_Address) != type(" "):
+            self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
+        else:
+            self.VI = rm.open_resource(GPIB_Address)
         self.VI.write_termination = self.VI.CR
         self.VI.read_termination = self.VI.CR
         #self.VI = visa.instrument('GPIB0::' + str(GPIB_Address))
@@ -381,7 +384,7 @@ class DSP_7280(object):
 
         """
         string_Off=self.VI.query('XOF')
-        return(tuple(float(re.split(string_Off))))#Test this.
+        return(tuple(float(re.split(string_Off, ","))))#Test this.
     
     def getYOff(self):
         """
@@ -393,7 +396,7 @@ class DSP_7280(object):
 
         """
         string_Off=self.VI.query('YOF')
-        return(tuple(float(re.split(string_Off))))#Test this. 
+        return(tuple(float(re.split(string_Off, ","))))#Test this. 
     
     def Toggle_Offset(self, Toggle):
         """
