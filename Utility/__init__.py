@@ -19,3 +19,5 @@ from .IPSMagUtil import *
 from .SMSMagUtil import *
 
 from .LockinUtil import *
+from .LockinUtil_big import*#7280 Lockin
+from .LockinUtil_small import*#7265 Lockin

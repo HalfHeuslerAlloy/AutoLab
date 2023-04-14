@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Utitily Tab for Configuring DSP_7280 Lockins.
-Functionally identical to the other lockinUtil, but different indecies in the lists
+Utitily Tab for Configuring DSP_7280 Lockins
 Created on Thu Jul 21 16:02:22 2022
+CURRENTLY ASSUMES YOU'RE USING THE NORMAL OUTPUT MODE AND SO LIMITS TC SELECTION ACCORDINGLY
 
 @author: eencsk
 """
@@ -24,13 +24,13 @@ class Util(tk.Frame):
     #Name of utility so it can e refer to later as part of a dictionary
     name = "Lockin"
     
-    Sensvalues=["2 nV/fA","5 nV/fA","10 nV/fA","20 nV/fA","50 nV/fA","100 nV/fA",
+    Sensvalues=["10 nV/fA","20 nV/fA","50 nV/fA","100 nV/fA",
                 "200 nV/fA","500 nV/fA","1 uV/pA","2 uV/pA","5 uV/pA","10 uV/pA",
                 "20 uV/pA","50 uV/pA","100 uV/pA","200 uV/pA","500 uV/pA","1 mV/nA",
                 "2 mV/nA","5 mV/nA","10 mV/nA","20 mV/nA","50 mV/nA","100 mV/nA",
                 "200 mV/nA","500 mV/nA","1 V/uA"]#Doesnt include the Low-noise current settings. 
     
-    TCvalues=["10 us","20 us","40 us","60 us","80 us","160 us","320 us","640 us",
+    TCvalues=["1 us", "2 us","5 us","10 us","20 us","50 us","100 us","200 us","500 us","1 ms", "2 ms",
               "5 ms","10 ms","20 ms","50 ms","100 ms","200 ms","500 ms","1 s",
               "2 s","5 s","10 s","20 s","50 s","100 s","200 s","500 s","1 Ks",
               "2 Ks","5 Ks","10 Ks","20 Ks","50 Ks","100 Ks"]
@@ -71,7 +71,8 @@ class Util(tk.Frame):
         TCEntryLabel = tk.Label(LockinTabFrame,text="Time Constant")
         TCEntryLabel.grid(column=1, row=1)
         self.TC=tk.StringVar(LockinTabFrame,"Enter Time Constant")
-        self.TCEntry=tk.OptionMenu(LockinTabFrame, self.TC, *self.TCvalues)
+        self.TCEntry=tk.OptionMenu(LockinTabFrame, self.TC, *self.TCvalues[8:])
+        #change this slice based on output mode. If fast, then full range permitted
         self.TCEntry.grid(column=2, row=1)
         ###OFFSET GUI ELEMENTS###
         self.XOFFEntry = tk.Entry(LockinTabFrame,width = 10)
@@ -104,7 +105,7 @@ class Util(tk.Frame):
         #Feel Free to add more, but the list (and try/except statements) will need expanding.
         #T=no need to update F=Parameter Needs Updating.
         try:
-            sens_to_send=(self.Sensvalues.index(self.Sensitivity.get()))+1 
+            sens_to_send=(self.Sensvalues.index(self.Sensitivity.get()))+3 
             #for some reason, starts at 1, not 0
             is_default[0]=False
         except ValueError:
@@ -208,7 +209,7 @@ class Util(tk.Frame):
         #create Metadata Dictionary
         Metadata={}
         Metadata["Name"]=self.NameEntry.get
-        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens()-1)]
+        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens()-3)]
         Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]
         XOff=Lockin_Manager.getXOff()
         YOff=Lockin_Manager.getXOff()

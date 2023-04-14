@@ -27,15 +27,17 @@ class Handler(ttk.Notebook):
         Initial setup of GUI widgets and the general window position
         """
         super().__init__(master)
-        
+        self.Util_List=[]#list to append tabs to, so that the Autolab wrapper can access them 
         self.Worker = None
         self.MainFrame=tk.Frame(master)
         self.MainFrame.grid(column=0, row=1, columnspan=3, rowspan=3)
         
         master.add(self.MainFrame,text="Main Script")
         self.UtilTab1=Utility.TestUtil.Util(master,title="Test 1")#Calls the Relevant Util Tab and Adds to Master
+        self.Util_List.append(self.UtilTab1)
         self.UtilTab2=Utility.TestUtil.Util(master,title="Test 2")
         #Duplicate Util tabs are a-Ok!, just make sure they're called something else
+        self.Util_List.append(self.UtilTab2)
         
         StartEntryLabel = tk.Label(self.MainFrame,text="Start")
         StartEntryLabel.pack()

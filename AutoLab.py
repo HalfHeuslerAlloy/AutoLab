@@ -516,7 +516,7 @@ class Window(tk.Frame):
             print(e)
             print("Failed to create file")
             return
-        
+             
         # try to start the measurement worker, raise error if it failed
         try:
             if self.MeasHandler.Start(self.PipeSend):

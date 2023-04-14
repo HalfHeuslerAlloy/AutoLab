@@ -6,6 +6,7 @@ Created on Fri May 13 10:55:39 2022
 """
 
 import numpy as np
+import re
 
 class DSP_7280(object):
     def __init__(self,rm, GPIB_Address, RemoteOnly = False):
@@ -13,8 +14,8 @@ class DSP_7280(object):
         Initializes the object as the 7265 Lock-in Amplifier.
         
         This class controls the DSP Lock-In Amplifier:
-        EG&G Instruments, Model 7265 
-        Should work with Signal Recovery 7265 DSP Lock-In
+        EG&G Instruments, Model 7280
+        Should work with Signal Recovery 7280 DSP Lock-In
         
         Parameters
         ----------
@@ -62,37 +63,40 @@ class DSP_7280(object):
         Usage :
             setTC(Value or Code)
                 Codes :
-                 '0'  = 10 us
-                 '1'  = 20 us
-                 '2'  = 40 us
-                 '3'  = 80 us
-                 '4'  = 160 us
-                 '5'  = 320 us
-                 '6'  = 640 us
-                 '7'  = 5 ms
-                 '8'  = 10 ms
-                 '9'  = 20 ms
-                 '10' = 50 ms
-                 '11' = 100 ms
-                 '12' = 200 ms
-                 '13' = 500 ms
-                 '14' = 1 s
-                 '15' = 2 s
-                 '16' = 5 s
-                 '17' = 10 s
-                 '18' = 20 s
-                 '19' = 50 s
-                 '20' = 100 s
-                 '21' = 200 s
-                 '22' = 500 s
-                 '23' = 1 ks
-                 '24' = 2 ks
-                 '25' = 5 ks
-                 '26' = 10 ks
-                 '27' = 20 ks
-                 '28' = 50 ks
-                 '29' = 100 ks
-                 '30' = 200 ks
+                 '0'  = 1 us
+                 '1'  = 2 us
+                 '2'  = 5 us
+                 '3'  = 10 us
+                 '4'  = 20 us
+                 '5'  = 50 us
+                 '6'  = 100 us
+                 '7'  = 200 us
+                 '8'  = 500 us
+                 '9'  = 1 ms
+                 '10' = 2 ms
+                 '11' = 5 ms
+                 '12' = 10 ms
+                 '13' = 20 ms
+                 '14' = 50 ms
+                 '15' = 100 ms
+                 '16' = 200 ms
+                 '17' = 500 ms
+                 '18' = 1 s
+                 '19' = 2 s
+                 '20' = 5 s
+                 '21' = 10 s
+                 '22' = 20 s
+                 '23' = 50 s
+                 '24' = 100 s
+                 '25' = 200 s
+                 '26' = 500 s
+                 '27' = 1 ks
+                 '28' = 2 ks
+                 '29' = 5 ks
+                 '30' = 10 ks
+                 '31' = 20 ks
+                 '32' = 50 ks
+                 '33' = 100 ks
                 Values are rounded to corresponding code.
         
         Parameters
@@ -103,14 +107,15 @@ class DSP_7280(object):
         if type(TC) != type(' '):
             TC = np.abs(TC) - 1E-9
             TC = np.clip(TC, 0, 199E3)
-            bins = np.array([10E-6, 20E-6, 40E-6, 80E-6,
-                                160E-6, 320E-6, 640E-6,
-                                5E-3, 10E-3, 20E-3, 50E-3,
+            bins = np.array([1E-6, 2E-6, 5E-6, 10E-6, 20E-6, 50E-6,
+                                100E-6, 200E-6, 500E-6,
+                                1E-3,2E-3,5E-3,
+                                10E-3, 20E-3, 50E-3,
                                 100E-3, 200E-3, 500E-3,
                                 1, 2, 5, 10, 20, 50,
                                 100, 200, 500,
                                 1E3, 2E3, 5E3, 10E3, 20E3, 50E3,
-                                100E3, 200E3])
+                                100E3])
             TC = str(len(bins[bins <= TC]))
         if TC in map(str, range(31)):
             self.VI.write('TC ' + TC)
@@ -119,6 +124,9 @@ class DSP_7280(object):
     def __getTC(self):
         return float(self.VI.query('TC.'))
     TC = property(__getTC, setTC, None, "Filter Time Constant.")
+    def getTCons (self):
+        return(self.VI.query('TC'))#gets the code for easier meshing with formatting. 
+    #Basically, if somoene sets a 1Ks TC, writing that as 1000 will be nasty.
     
     def setSEN(self, vSen):
         """ Sets the Full Scale Sensitivity.
@@ -126,8 +134,6 @@ class DSP_7280(object):
         Usage :
             setTC(Value or Code)
                 Codes : IMODE=0 IMODE=1 IMODE=2
-                 '1'  = 2 nV    2 fA    n/a
-                 '2'  = 5 nV    5 fA    n/a
                  '3'  = 10 nV   10 fA   n/a
                  '4'  = 20 nV   20 fA   n/a
                  '5'  = 50 nV   50 fA   n/a
@@ -166,7 +172,7 @@ class DSP_7280(object):
                 vSen = vSen * 1.0E-6 
             vSen = np.abs(vSen) - 1E-18
             vSen = np.clip(vSen, 0, 0.99E-6)
-            bins = np.array([0, 2E-15, 5E-15, 10E-15, 20E-15, 
+            bins = np.array([0, 10E-15, 20E-15, 
                                 50E-15, 100E-15, 200E-15, 500E-15,
                                 1E-12, 2E-12, 5E-12, 10E-12, 20E-12, 
                                 50E-12, 100E-12, 200E-12, 500E-12,
@@ -185,6 +191,9 @@ class DSP_7280(object):
     def __getSEN(self):
         return float(self.VI.query('SEN.'))
     SEN = property(__getSEN, setSEN, None, "Full Scale Sensitivity.")
+    def getSens(self):
+        return(self.VI.query('SEN'))
+    #for easier meshing with Lockins across different input modes. 
     
     def FilterSlope(self, sl):
         """Set the output filter slope.
@@ -341,6 +350,107 @@ class DSP_7280(object):
             self.VI.write('ACGAIN ' + AcGain)
         else:
             print('EG&G 7265 Lock-In Wrong AcGain Code')
+            
+    def setXoff(self, Offset, Enable):
+        """Sets the Offset in % on the X channel and toggles with Enable"""
+        off_to_send=int(Offset*100)#rounds the offset in % to the integer to send
+        if abs(off_to_send) > 300:
+            raise ValueError("Offset out of 300% max range")
+        elif Enable == True:
+            self.VI.write('XOF 1 '+off_to_send)
+        elif Enable == False:
+            self.VI.write('XOF 0 '+off_to_send)
+    
+    def setYoff(self, Offset, Enable):
+        """Sets the Offset in % on the Y channel and toggles with Enable"""
+        off_to_send=int(Offset*100)#rounds the offset in % to the integer to send
+        if abs(off_to_send) > 30000:
+            raise ValueError("Offset out of 300% max range")
+        elif Enable == True:
+            self.VI.write('YOF 1 '+off_to_send)
+        elif Enable == False:
+            self.VI.write('YOF 0 '+off_to_send)
+            
+    def getXOff(self):
+        """
+
+        Returns
+        -------
+        A tuple of values n1,n2. n1= 0 or 1, whether or not the X-offset is enabled
+        n2- the value of the offset in %*100
+
+        """
+        string_Off=self.VI.query('XOF')
+        return(tuple(float(re.split(string_Off))))#Test this.
+    
+    def getYOff(self):
+        """
+
+        Returns
+        -------
+        A tuple of values n1,n2. n1= 0 or 1, whether or not the y-offset is enabled
+        n2- the value of the offset in %*100
+
+        """
+        string_Off=self.VI.query('YOF')
+        return(tuple(float(re.split(string_Off))))#Test this. 
+    
+    def Toggle_Offset(self, Toggle):
+        """
+        Toggle The Offsets on/off
+
+        Parameters
+        ----------
+        Toggle : INT
+            Offsets to turn on. Code:
+                0 - Offset off
+                1 - Offset X Channel
+                2 - Offset Y Channel
+                3 - Offset both X and Y
+
+
+        """
+        if abs(int(Toggle)) > 3:
+            raise ValueError("Not a Valid Offset Input")
+        else:
+            if Toggle==0:
+                self.VI.write('XOF 0')
+                self.VI.write('YOF 0')
+            elif Toggle==1:
+                self.VI.write('XOF 1')
+                self.VI.write('YOF 0')
+                
+            elif Toggle==2:
+                self.VI.write('XOF 0')
+                self.VI.write('YOF 1')
+                
+            elif Toggle==3:
+                self.VI.write('XOF 1')
+                self.VI.write('YOF 1')
+
+   
+        def setExp(self, Exp):
+            """
+            Set the expand of the lockin. Always x10.
+
+            Parameters
+            ----------
+            Exp : INT
+                Expand to turn on. Code:
+                    0 - Expand off
+                    1 - Expand X Channel
+                    2 - Expand Y Channel
+                    3 - Expand both X and Y
+
+
+            """
+            if abs(int(Exp)) > 3:
+                raise ValueError("Not a Valid Expand Input")
+            else:
+                self.VI.write('EX '+abs(int(Exp)))
+                
+        def getExp(self):
+            return(float(self.VI.query('EX')))
             
     @property
     def X(self):

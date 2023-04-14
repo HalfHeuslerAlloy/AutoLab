@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Utitily Tab for Configuring DSP_7280 Lockins.
-Functionally identical to the other lockinUtil, but different indecies in the lists
+Utitily Tab for Configuring DSP_7265 Lockins
 Created on Thu Jul 21 16:02:22 2022
 
 @author: eencsk
