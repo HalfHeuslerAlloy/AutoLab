@@ -29,11 +29,11 @@ class Util(tk.Frame):
                 "2 mV/nA","5 mV/nA","10 mV/nA","20 mV/nA","50 mV/nA","100 mV/nA",
                 "200 mV/nA","500 mV/nA","1 V/uA"]#Doesnt include the Low-noise current settings. 
     
-    TCvalues=["10 us","20 us","40 us","60 us","80 us","160 us","320 us","640 us",
+    TCvalues=["10 us","20 us","40 us","80 us","160 us","320 us","640 us",
               "5 ms","10 ms","20 ms","50 ms","100 ms","200 ms","500 ms","1 s",
               "2 s","5 s","10 s","20 s","50 s","100 s","200 s","500 s","1 Ks",
               "2 Ks","5 Ks","10 Ks","20 Ks","50 Ks","100 Ks"]
-    #TODO: Check these against the manual, they are wrong.
+
     
     Off_and_Expo_Values=["Off","Offset X", "Offset Y", "Offset X and Y",
                          "Expand X", "Expand Y", "Expand X and Y", 
@@ -229,6 +229,7 @@ class Util(tk.Frame):
         else:
             Metadata["YExpand"]=False
         
+        rm.close()#cleanup
         return(Metadata)
         
         #self.after(250,self.update)

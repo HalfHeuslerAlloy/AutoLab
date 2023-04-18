@@ -92,7 +92,6 @@ class DSP_7265(object):
                  '27' = 20 ks
                  '28' = 50 ks
                  '29' = 100 ks
-                 '30' = 200 ks
                 Values are rounded to corresponding code.
         
         Parameters
@@ -110,9 +109,9 @@ class DSP_7265(object):
                                 1, 2, 5, 10, 20, 50,
                                 100, 200, 500,
                                 1E3, 2E3, 5E3, 10E3, 20E3, 50E3,
-                                100E3, 200E3])
+                                100E3])
             TC = str(len(bins[bins <= TC]))
-        if TC in map(str, range(31)):
+        if TC in map(str, range(30)):
             self.VI.write('TC ' + TC)
         else:
             print('EG&G 7265 Lock-In Wrong Time Constant Code')

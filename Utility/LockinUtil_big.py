@@ -230,6 +230,7 @@ class Util(tk.Frame):
         else:
             Metadata["YExpand"]=False
         
+        rm.close()#cleanup
         return(Metadata)
         
         #self.after(250,self.update)
