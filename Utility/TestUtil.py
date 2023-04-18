@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
 from tkinter import font as tkFont
+import datetime
 
 class Util(tk.Frame):
     """
@@ -18,12 +19,12 @@ class Util(tk.Frame):
     #Name of utility so it can e refer to later as part of a dictionary
     name = "test"
     
-    def __init__(self, master):
+    def __init__(self, master,title="Test"):
         
         super().__init__(master)
-        
+        self.title=title
         utilTabFrame = tk.Frame(master)
-        master.add(utilTabFrame,text="Test")
+        master.add(utilTabFrame,text=title)
         
         TestEntryLabel = tk.Label(utilTabFrame,text="X")
         TestEntryLabel.grid(column=0, row=0)
@@ -37,6 +38,17 @@ class Util(tk.Frame):
         pass
         
         self.after(250,self.update)
+        
+    def Export_MetaData(self):
+        """
+        Creates a Metadata Dictionary for the Util. As a test, just returns
+        Time and the title of the Util.
+        """
+        Metadata={}
+        Metadata["Name"]=self.title
+        Metadata["Time"]=datetime.datetime.now()
+        Metadata["X"]=self.XaxisEntry.get()
+        return(Metadata)
 
 
 if __name__=="__main__":

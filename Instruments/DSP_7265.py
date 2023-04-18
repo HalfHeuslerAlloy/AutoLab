@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 class DSP_7265(object):
     def __init__(self,rm, GPIB_Address, RemoteOnly = False):
@@ -11,12 +12,18 @@ class DSP_7265(object):
         
         Parameters
         ----------
-        GPIB_Address : int, optional
+        GPIB_Address : int or Str, optional
             GPIB Address of device.
+            If int, just the GPIB address, if Str, the full GPIB address, as pulled from
+            rm.list_resources().
         RemoteOnly : bool, optional
             Control remotely (T) or not (F).
         """
-        self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
+        if type(GPIB_Address) != type(" "):
+            self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
+        else:
+            self.VI = rm.open_resource(GPIB_Address)
+            
         self.VI.write_termination = self.VI.CR
         self.VI.read_termination = self.VI.CR
         #self.VI = visa.instrument('GPIB0::' + str(GPIB_Address))
@@ -85,7 +92,6 @@ class DSP_7265(object):
                  '27' = 20 ks
                  '28' = 50 ks
                  '29' = 100 ks
-                 '30' = 200 ks
                 Values are rounded to corresponding code.
         
         Parameters
@@ -103,15 +109,20 @@ class DSP_7265(object):
                                 1, 2, 5, 10, 20, 50,
                                 100, 200, 500,
                                 1E3, 2E3, 5E3, 10E3, 20E3, 50E3,
-                                100E3, 200E3])
+                                100E3])
             TC = str(len(bins[bins <= TC]))
-        if TC in map(str, range(31)):
+        if TC in map(str, range(30)):
             self.VI.write('TC ' + TC)
         else:
             print('EG&G 7265 Lock-In Wrong Time Constant Code')
     def __getTC(self):
         return float(self.VI.query('TC.'))
+    #TC. reads the time constant in seconds TC (no full stop) reads the corresponding code
     TC = property(__getTC, setTC, None, "Filter Time Constant.")
+    
+    def getTCons (self):
+        return(self.VI.query('TC'))#gets the code for easier meshing with formatting. 
+    #Basically, if somoene sets a 1Ks TC, writing that as 1000 will be nasty.
     
     def setSEN(self, vSen):
         """ Sets the Full Scale Sensitivity.
@@ -177,7 +188,13 @@ class DSP_7265(object):
             print('EG&G 7265 Lock-In Wrong Scale Sensitivity Code')
     def __getSEN(self):
         return float(self.VI.query('SEN.'))
+    #SEN. reads the senitivity in the relevant unit, based on the Input mode
+    #SEN (no full stop) reads the corresponding code
     SEN = property(__getSEN, setSEN, None, "Full Scale Sensitivity.")
+    
+    def getSens(self):
+        return(self.VI.query('SEN'))
+    #for easier meshing with Lockins across different input modes. 
     
     def FilterSlope(self, sl):
         """Set the output filter slope.
@@ -334,7 +351,114 @@ class DSP_7265(object):
             self.VI.write('ACGAIN ' + AcGain)
         else:
             print('EG&G 7265 Lock-In Wrong AcGain Code')
+    
+    def setXoff(self, Offset, Enable):
+        """Sets the Offset in % on the X channel and toggles with Enable"""
+        off_to_send=int(Offset*100)#rounds the offset in % to the integer to send
+        if abs(off_to_send) > 300:
+            raise ValueError("Offset out of 300% max range")
+        elif Enable == True:
+            self.VI.write('XOF 1 '+off_to_send)
+        elif Enable == False:
+            self.VI.write('XOF 0 '+off_to_send)
+    
+    def setYoff(self, Offset, Enable):
+        """Sets the Offset in % on the Y channel and toggles with Enable"""
+        off_to_send=int(Offset*100)#rounds the offset in % to the integer to send
+        if abs(off_to_send) > 30000:
+            raise ValueError("Offset out of 300% max range")
+        elif Enable == True:
+            self.VI.write('YOF 1 '+off_to_send)
+        elif Enable == False:
+            self.VI.write('YOF 0 '+off_to_send)
             
+    def getXOff(self):
+        """
+
+        Returns
+        -------
+        A tuple of values n1,n2. n1= 0 or 1, whether or not the X-offset is enabled
+        n2- the value of the offset in %*100
+
+        """
+        string_Off=self.VI.query('XOF')
+        list_Off=re.split(",",string_Off)
+        
+        #has to be done beforehand because string comprehension is hard
+        return(tuple(float(i) for i in list_Off))#Test this.
+    
+    def getYOff(self):
+        """
+
+        Returns
+        -------
+        A tuple of values n1,n2. n1= 0 or 1, whether or not the y-offset is enabled
+        n2- the value of the offset in %*100
+
+        """
+        string_Off=self.VI.query('YOF')
+        list_Off=re.split(",",string_Off)
+        
+        #has to be done beforehand because string comprehension is hard
+        return(tuple(float(i) for i in list_Off)) 
+    
+    def Toggle_Offset(self, Toggle):
+        """
+        Toggle The Offsets on/off
+
+        Parameters
+        ----------
+        Toggle : INT
+            Offsets to turn on. Code:
+                0 - Offset off
+                1 - Offset X Channel
+                2 - Offset Y Channel
+                3 - Offset both X and Y
+
+
+        """
+        if abs(int(Toggle)) > 3:
+            raise ValueError("Not a Valid Offset Input")
+        else:
+            if Toggle==0:
+                self.VI.write('XOF 0')
+                self.VI.write('YOF 0')
+            elif Toggle==1:
+                self.VI.write('XOF 1')
+                self.VI.write('YOF 0')
+                
+            elif Toggle==2:
+                self.VI.write('XOF 0')
+                self.VI.write('YOF 1')
+                
+            elif Toggle==3:
+                self.VI.write('XOF 1')
+                self.VI.write('YOF 1')
+
+   
+    def setExp(self, Exp):
+        """
+        Set the expand of the lockin. Always x10.
+
+        Parameters
+        ----------
+        Exp : INT
+            Expand to turn on. Code:
+                0 - Expand off
+                1 - Expand X Channel
+                2 - Expand Y Channel
+                3 - Expand both X and Y
+
+
+        """
+        if abs(int(Exp)) > 3:
+            raise ValueError("Not a Valid Expand Input")
+        else:
+            self.VI.write('EX '+abs(int(Exp)))
+            
+    def getExp(self):
+        return(float(self.VI.query('EX')))
+        
     @property
     def X(self):
         """Returns X component of lock-in measure."""
