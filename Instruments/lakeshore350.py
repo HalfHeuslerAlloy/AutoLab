@@ -20,15 +20,18 @@ class lakeshore350(object):
         """
         Parameters:
             str N: channel (A,B,C,D) to get temperature from in kelvin
+
         Returns:
             float Temp : temperature of channel N in kelvin
         
         desc:
             from page 150 of lakeshore manual
         """
+
         if N not in "ABCD":
             raise Exception()
         Temp = self.inst.query("KRDG? "+ N )
+        
         Temp.replace("\n","")
         Temp.replace("\r","")
         Temp = float(Temp)
@@ -39,17 +42,20 @@ class lakeshore350(object):
         """
         Parameters:
             str N: channel (A,B,C,D) to get temperature setpoint
+
         Returns:
             float Temp: temperature setup of channel N 
         
         desc:
             from page 156 of lakeshore manual
         """
+
         if N not in "ABCD":
             raise Exception()
         Temp = self.inst.query("SETP? "+ N )
         Temp = Temp.replace("\n","")
         Temp = Temp.replace("\r","")
+
         Temp = float(Temp)
         
         return Temp
@@ -66,6 +72,7 @@ class lakeshore350(object):
         
     def getOutputMode(self,N):
         """
+
         Parameters:
             int N: output channel to get status
         Returns:
@@ -95,6 +102,7 @@ class lakeshore350(object):
         Vals = Vals.replace("\r","")
         
         Vals = Vals.split(",")
+
         Mode = int(Vals[0])
         Input = int(Vals[1])
         Powerup = int(Vals[2])
@@ -103,6 +111,7 @@ class lakeshore350(object):
     
     def setOutputMode(self,N,Mode,Input,Powerup):
         """
+
         Parameters:
             int N: output channel to get status
             int Mode: mode of channel:
@@ -126,6 +135,7 @@ class lakeshore350(object):
             from page 153 of lakeshore manual
         """
         
+
         self.inst.write("OUTMODE {0:0.0f},{1:0.0f},{2:0.0f},{3:0.0f}".format(N,Mode,Input,Powerup))
         
     def allOff(self):
@@ -140,3 +150,4 @@ class lakeshore350(object):
             Mode,Input,Powerup=self.getOutputMode(N)
             self.setOutputMode(N, 0, Input, Powerup)
             
+
