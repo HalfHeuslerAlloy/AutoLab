@@ -9,6 +9,7 @@ Basic Keithley IV curve setup
 """
 
 import tkinter as tk
+from tkinter import ttk
 import time
 import numpy as np
 
@@ -21,37 +22,47 @@ import pyvisa
 
 import Instruments as Inst
 
-class Handler(tk.Frame):
+class Handler(ttk.Notebook):
     """
     Measurement worker of the main AutoLab window
     """
     def __init__(self, master):
         """
-        Initial setup of GUI widgets and the general window position
+        Preamble to set up the Main Script Frame        
         """
         super().__init__(master)
+        self.Worker = None
+        self.MainFrame=tk.Frame(master)
+        self.MainFrame.grid(column=0, row=1, columnspan=3, rowspan=3)
+        master.add(self.MainFrame,text="Main Script") 
+        """
+        Utilities Section
+        """
         
-        StartEntryLabel = tk.Label(master,text="Start (T)")
+        """
+        Initial setup of GUI widgets and the general window position
+        """
+        StartEntryLabel = tk.Label(self.MainFrame,text="Start (T)")
         StartEntryLabel.pack()
-        self.StartEntry = tk.Entry(master,width = 10)
+        self.StartEntry = tk.Entry(self.MainFrame,width = 10)
         self.StartEntry.insert(tk.END,"0")
         self.StartEntry.pack()
         
-        StopEntryLabel = tk.Label(master,text="Stop (T)")
+        StopEntryLabel = tk.Label(self.MainFrame,text="Stop (T)")
         StopEntryLabel.pack()
-        self.StopEntry = tk.Entry(master,width = 10)
+        self.StopEntry = tk.Entry(self.MainFrame,width = 10)
         self.StopEntry.insert(tk.END,"0.2")
         self.StopEntry.pack()
         
-        RateEntryLabel = tk.Label(master,text="Sweep Rate (T/min)")
+        RateEntryLabel = tk.Label(self.MainFrame,text="Sweep Rate (T/min)")
         RateEntryLabel.pack()
-        self.RateEntry = tk.Entry(master,width = 10)
+        self.RateEntry = tk.Entry(self.MainFrame,width = 10)
         self.RateEntry.insert(tk.END,"0.1")
         self.RateEntry.pack()
         
-        DwellEntryLabel = tk.Label(master,text="Dwell (s)")
+        DwellEntryLabel = tk.Label(self.MainFrame,text="Dwell (s)")
         DwellEntryLabel.pack()
-        self.DwellEntry = tk.Entry(master,width = 10)
+        self.DwellEntry = tk.Entry(self.MainFrame,width = 10)
         self.DwellEntry.insert(tk.END,"0.5")
         self.DwellEntry.pack()
 

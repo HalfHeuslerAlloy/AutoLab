@@ -6,6 +6,7 @@ Created on Fri May  6 14:59:33 2022
 """
 
 import tkinter as tk
+from tkinter import ttk
 import time
 import numpy as np
 from multiprocessing import Process, Queue
@@ -16,39 +17,48 @@ import Instruments as Inst
 
 import pyvisa
 
-class Handler(tk.Frame):
+class Handler(ttk.Notebook):
     """
     Measurement worker of the main AutoLab window
     """
     def __init__(self, master):
         """
-        Initial setup of GUI widgets and the general window position
+        Preamble to set up the Main Script Frame        
         """
         super().__init__(master)
-        
         self.Worker = None
+        self.MainFrame=tk.Frame(master)
+        self.MainFrame.grid(column=0, row=1, columnspan=3, rowspan=3)
+        master.add(self.MainFrame,text="Main Script") 
+        """
+        Utilities Section
+        """
         
-        StartEntryLabel = tk.Label(master,text="Start")
+
+        """
+        Initial setup of GUI widgets and the general window position
+        """
+        StartEntryLabel = tk.Label(self.MainFrame,text="Start")
         StartEntryLabel.pack()
-        self.StartEntry = tk.Entry(master,width = 10)
+        self.StartEntry = tk.Entry(self.MainFrame,width = 10)
         self.StartEntry.insert(tk.END,"0")
         self.StartEntry.pack()
         
-        StopEntryLabel = tk.Label(master,text="Stop")
+        StopEntryLabel = tk.Label(self.MainFrame,text="Stop")
         StopEntryLabel.pack()
-        self.StopEntry = tk.Entry(master,width = 10)
+        self.StopEntry = tk.Entry(self.MainFrame,width = 10)
         self.StopEntry.insert(tk.END,"10")
         self.StopEntry.pack()
         
-        StepEntryLabel = tk.Label(master,text="Steps")
+        StepEntryLabel = tk.Label(self.MainFrame,text="Steps")
         StepEntryLabel.pack()
-        self.StepsEntry = tk.Entry(master,width = 10)
+        self.StepsEntry = tk.Entry(self.MainFrame,width = 10)
         self.StepsEntry.insert(tk.END,"11")
         self.StepsEntry.pack()
         
-        DwellEntryLabel = tk.Label(master,text="Dwell (s)")
+        DwellEntryLabel = tk.Label(self.MainFrame,text="Dwell (s)")
         DwellEntryLabel.pack()
-        self.DwellEntry = tk.Entry(master,width = 10)
+        self.DwellEntry = tk.Entry(self.MainFrame,width = 10)
         self.DwellEntry.insert(tk.END,"0.1")
         self.DwellEntry.pack()
 
@@ -89,9 +99,9 @@ def Worker(Pipe,Str,Stp,Steps,Dwl):
     #column headers
     Pipe.send("X    Y1    Y2\n")
  
-    for x in np.linspace(Str,Stp,Steps):
+    for x in np.linspace(Str,Stp,int(Steps)):
         
-        for y in np.linspace(Str,Stp,Steps):
+        for y in np.linspace(Str,Stp,int(Steps)):
         
             #Check for commands from controller
             if Pipe.poll():
