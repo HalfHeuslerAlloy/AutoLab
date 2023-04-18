@@ -741,7 +741,6 @@ class Window(tk.Frame):
         #write metadata
 
         for key in self.WorkerBook.children.keys():
-            print(key)
             try:
                 #iterate through all children of the main WorkerBook and attempt to call Export_MetaData
                 #Export_MetaData should return a dictionary
