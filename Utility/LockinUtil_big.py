@@ -212,7 +212,7 @@ class Util(tk.Frame):
         Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens())-3]
         Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]
         XOff=Lockin_Manager.getXOff()
-        YOff=Lockin_Manager.getXOff()
+        YOff=Lockin_Manager.getYOff()
         Phas=Lockin_Manager.getRefPhase()
         if  XOff[0]!=0.0:
             Metadata["XOffset"]=XOff[1]/100
