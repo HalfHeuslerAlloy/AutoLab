@@ -460,7 +460,7 @@ class SR830 (object):
     @property
     def Magnitude(self):
         """Returns Magnitude of lock-in measure."""
-        return self.__chkFloat(self.VI.query('OUTP? 3'))
+        return self.__chkFloat(self.VI.query('OUTP?3'))
     @property
     def Phase(self):
         """Returns Phase of lock-in measure."""
