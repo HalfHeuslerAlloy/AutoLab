@@ -458,7 +458,11 @@ class DSP_7265(object):
             
     def getExp(self):
         return(float(self.VI.query('EX')))
-        
+    
+    @property
+    def clear(self):
+        #clears the Buffer
+        self.VI.clear()    
     @property
     def X(self):
         """Returns X component of lock-in measure."""
