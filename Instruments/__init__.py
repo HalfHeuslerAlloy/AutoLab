@@ -15,3 +15,4 @@ from .DSP_7280 import *
 from .IPS120 import *
 from .SMS120C import *
 from .Arroyo4300 import *
+from .SR830 import *

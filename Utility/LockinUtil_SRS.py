@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Utitily Tab for Configuring DSP_7265 Lockins
-Created on Thu Jul 21 16:02:22 2022
+Utitily Tab for Configuring SRS830 Lockins
+Created on Tue Apr 25 12:27:31 2023
 
 @author: eencsk
 """
@@ -27,18 +27,18 @@ class Util(tk.Frame):
                 "200 nV/fA","500 nV/fA","1 uV/pA","2 uV/pA","5 uV/pA","10 uV/pA",
                 "20 uV/pA","50 uV/pA","100 uV/pA","200 uV/pA","500 uV/pA","1 mV/nA",
                 "2 mV/nA","5 mV/nA","10 mV/nA","20 mV/nA","50 mV/nA","100 mV/nA",
-                "200 mV/nA","500 mV/nA","1 V/uA"]#Doesnt include the Low-noise current settings. 
+                "200 mV/nA","500 mV/nA","1 V/uA"] 
     
-    TCvalues=["10 us","20 us","40 us","80 us","160 us","320 us","640 us",
-              "5 ms","10 ms","20 ms","50 ms","100 ms","200 ms","500 ms","1 s",
-              "2 s","5 s","10 s","20 s","50 s","100 s","200 s","500 s","1 Ks",
-              "2 Ks","5 Ks","10 Ks","20 Ks","50 Ks","100 Ks"]
+    TCvalues=["10 us","30 us","100 us","300 us","1 ms","3 ms","10 ms","30 ms","100 ms",
+              "300 ms","1 s","3 s","10 s","30 s","100 s","300 s",
+              "1 ks","3 ks","10 ks","30 ks"]
 
     
-    Off_and_Expo_Values=["Off","Offset X", "Offset Y", "Offset X and Y",
-                         "Expand X", "Expand Y", "Expand X and Y", 
-                         "Offset and Expand X", "Offset and Expand Y", "Offset and Expand X and Y"]
-    #No, I'm not making so you can Expand one Channel and Offset the other, are you MAD?
+    Off_and_Expo_Values=["Off","Offset X", "Offset Y", "Offset X and Y", 
+                         "Offset and Expand X x10", "Offset and Expand Y x10", "Offset and Expand X and Y x10",
+                         "Offset and Expand X x100", "Offset and Expand Y x100", "Offset and Expand X and Y x100"]
+    #No, I'm not making so you can Expand one Channel and Offset the other, are you MAD? 
+    #Also Cant think of a scenario where you would want a x10 expand and no Offset. Just change the sensitivity.
     def __init__(self, master,title="Lockin Options",addresses=[]):
 
         super().__init__(master)
@@ -58,7 +58,6 @@ class Util(tk.Frame):
             rm.close()
         #if addresses are supplied through the script which calls this util, we dont need to poll all instruments
         #speeds up loading the util
-        rm.close()
         self.Com=tk.StringVar(LockinTabFrame,"GPIB Address")
         self.ComEntry=tk.OptionMenu(LockinTabFrame,self.Com,*addresses)
         self.ComEntry.grid(column=0,row=1)
@@ -84,7 +83,7 @@ class Util(tk.Frame):
         self.YOFFEntry = tk.Entry(LockinTabFrame,width = 10)
         self.YOFFEntry.insert(tk.END,"Y-Offset(%)")
         self.YOFFEntry.grid(column=2, row=3)
-        self.Offset_option=tk.StringVar(LockinTabFrame,"Set Offset Enable")
+        self.Offset_option=tk.StringVar(LockinTabFrame,"Apply Offsets?")
         self.SetOffset_Menu=tk.OptionMenu(LockinTabFrame, self.Offset_option, *self.Off_and_Expo_Values)
         self.SetOffset_Menu.grid(column=2,row=4)
         
@@ -102,14 +101,13 @@ class Util(tk.Frame):
     def configure(self):
         rm=pyvisa.ResourceManager()
         address=self.Com.get()
-        is_default=[True,True,True,True,True]
+        is_default=[True,True,True]
         #list of bools to see if we need to send values to the Lockin
-        #Currently in the order Sensitivity,TC,XOffset,YOffset,EnableOffset/Expand.
+        #Currently in the order Sensitivity,TC,EnableOffset/Expand.
         #Feel Free to add more, but the list (and try/except statements) will need expanding.
         #T=no need to update F=Parameter Needs Updating.
         try:
-            sens_to_send=(self.Sensvalues.index(self.Sensitivity.get()))+1 
-            #for some reason, starts at 1, not 0
+            sens_to_send=(self.Sensvalues.index(self.Sensitivity.get())) 
             is_default[0]=False
         except ValueError:
             print("Did Not Update Sensitivity")
@@ -119,27 +117,32 @@ class Util(tk.Frame):
         except ValueError:
             print("Did Not Update Time Constant")
 
-        try:
-            XOFF_to_send=float(self.XOFFEntry.get())
-            is_default[2]=False
-        except ValueError:
-            print("Did Not Update X-Offset")
-        
-        try:
-            YOFF_to_send=float(self.YOFFEntry.get())
-            is_default[3]=False
-        except ValueError:
-            print("Did Not Update Y-Offset")
             
         try:
             ApplyExpands=self.Off_and_Expo_Values.index(self.Offset_option.get())
-            is_default[4]=False
+            is_default[2]=False
         except ValueError:
-            print("Did Not Change Offset/Expand Setting")    
+            print("Did Not Change Offset/Expand Setting") 
+        X_OffToSend=0
+        Y_OffToSend=0
+        if is_default[2]==False:
+            try:
+                X_OffToSend=float(float(self.XOFFEntry.get()))
+            except ValueError:
+                print("Did Not Change X Offset")
+            try:
+                Y_OffToSend=float(float(self.YOFFEntry.get()))
+            except ValueError:
+                print("Did Not Change Y offset")
+            
+            if X_OffToSend ==0 and Y_OffToSend == 0 and ApplyExpands != 0: 
+                #if ApplyExpands is 0, we're trying to disable the Offsets, so we need to handle the case where no value has been entered in the Dialogues
+                print("No Valid Offsets Detected, Did Not Apply Offset/Expand Setting")
+                is_default[2]=True
         
         #ACTUAL CONNECTING TO THE INSTRUMENT SECTION
         try:
-            lockin=Inst.DSP_7265(rm,address)
+            lockin=Inst.SR830(rm,address)
             for x in range(0,len(is_default)):
                 if is_default[x] == True:
                     pass# handles the not-updating
@@ -147,53 +150,43 @@ class Util(tk.Frame):
                     lockin.setSEN(str(sens_to_send))
                 elif x==1:
                     lockin.setTC(str(TC_to_send))
-                elif x==2:
-                    if lockin.getXOff()[0]==0.0:
-                        lockin.setXOff(XOFF_to_send,False)
-                    else:
-                        lockin.setXOff(XOFF_to_send,True)
-                elif x==3:
-                    if lockin.getYOff()[0]==0.0:
-                        lockin.setYOff(YOFF_to_send,False)
-                    else:
-                        lockin.setYOff(YOFF_to_send,True)
-                elif x==4:#WARNING! COLLAPSE THIS OR GAZE INTO SATAN'S ELIF STATEMENTS
+                elif x==2:#WARNING! COLLAPSE THIS OR GAZE INTO SATAN'S ELIF STATEMENTS
                     if ApplyExpands==0:
-                        lockin.Toggle_Offset(0)
-                        lockin.setExp(0)
+                        lockin.setX_OffExp(0)
+                        lockin.setY_OffExp(0)#sends an offset of 0 which turns off the offset
                     elif ApplyExpands==1:
-                        lockin.Toggle_Offset(1)
-                        lockin.setExp(0)
+                        lockin.setX_OffExp(X_OffToSend)
+                        lockin.setY_OffExp(0)
                     elif ApplyExpands==2:
-                        lockin.Toggle_Offset(2)
-                        lockin.setExp(0)
+                        lockin.setX_OffExp(0)
+                        lockin.setY_OffExp(Y_OffToSend)
                     elif ApplyExpands==3:
-                        lockin.Toggle_Offset(3)
-                        lockin.setExp(0)
+                        lockin.setX_OffExp(X_OffToSend)
+                        lockin.setY_OffExp(Y_OffToSend)
                     elif ApplyExpands==4:
-                        lockin.Toggle_Offset(0)
-                        lockin.setExp(1)
+                        lockin.setX_OffExp(X_OffToSend,1)
+                        lockin.setY_OffExp(0)
                     elif ApplyExpands==5:
-                        lockin.Toggle_Offset(0)
-                        lockin.setExp(2)
+                        lockin.setX_OffExp(0)
+                        lockin.setY_OffExp(Y_OffToSend,1)
                     elif ApplyExpands==6:
-                        lockin.Toggle_Offset(0)
-                        lockin.setExp(3)
+                        lockin.setX_OffExp(X_OffToSend,1)
+                        lockin.setY_OffExp(Y_OffToSend,1)
                     elif ApplyExpands==7:
-                        lockin.Toggle_Offset(1)
-                        lockin.setExp(1)
+                        lockin.setX_OffExp(X_OffToSend,2)
+                        lockin.setY_OffExp(0)
                     elif ApplyExpands==8:
-                        lockin.Toggle_Offset(2)
-                        lockin.setExp(2)
+                        lockin.setX_OffExp(0)
+                        lockin.setY_OffExp(Y_OffToSend,2)
                     elif ApplyExpands==9:
-                        lockin.Toggle_Offset(3)
-                        lockin.setExp(3)
+                        lockin.setX_OffExp(X_OffToSend,2)
+                        lockin.setY_OffExp(Y_OffToSend,2)
             #given that kludge, may want to consider putting offset and expand on seperate
             #options, but Tab is cluttered as is!
             self.ApplyButton.configure(bg="green")
         except Exception as e:
             print(e)
-            print("Failed to configure DSP 7265 Lockin")
+            print("Failed to configure SRS830 Lockin")
             return False
         rm.close()#cleanup
         
@@ -208,31 +201,29 @@ class Util(tk.Frame):
         """
         rm=pyvisa.ResourceManager()
         address=self.Com.get()
-        Lockin_Manager=Inst.DSP_7265(rm,address)
+        Lockin_Manager=Inst.SR830(rm,address)
         #create Metadata Dictionary
         Metadata={}
         Metadata["Name"]=self.NameEntry.get()
-        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens())-1]
+        Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens())]
         Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]
-        XOff=Lockin_Manager.getXOff()
-        YOff=Lockin_Manager.getYOff()
+        XOff=Lockin_Manager.getX_OffExp()
+        YOff=Lockin_Manager.getY_OffExp()
         Phas=Lockin_Manager.getRefPhase()
         if  XOff[0]!=0.0:
-            Metadata["XOffset"]=XOff[1]/100
+            Metadata["XOffset"]=XOff[0]
         if YOff[0]!=0.0:
-            Metadata["YOffset"]=YOff[1]/100
+            Metadata["YOffset"]=YOff[0]
         if Phas != 0:
             Metadata["PhaseOffset"]=Phas
-        Exp=Lockin_Manager.getExp()
-        if Exp==1 or Exp==3:
-            Metadata["XExpand"]=True
-        else:
-            Metadata["XExpand"]=False
-        if Exp==2 or Exp==3:
-            Metadata["YExpand"]=True
-        else:
-            Metadata["YExpand"]=False
-        
+        if XOff[1]==1:
+            Metadata["XExpand"]="x10"
+        if XOff[1]==2:
+            Metadata["XExpand"]="x100"
+        if YOff[1]==1:
+            Metadata["YExpand"]="x10"
+        if YOff[1]==2:
+            Metadata["YExpand"]="x100"
         rm.close()#cleanup
         return(Metadata)
         
