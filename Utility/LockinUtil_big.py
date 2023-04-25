@@ -39,7 +39,7 @@ class Util(tk.Frame):
                          "Expand X", "Expand Y", "Expand X and Y", 
                          "Offset and Expand X", "Offset and Expand Y", "Offset and Expand X and Y"]
     #No, I'm not making so you can Expand one Channel and Offset the other, are you MAD?
-    def __init__(self, master,title="Lockin Options"):
+    def __init__(self, master,title="Lockin Options",addresses=[]):
 
         super().__init__(master)
         
@@ -52,9 +52,12 @@ class Util(tk.Frame):
         ###COMMS GUI Element###
         #want this populated with valid VISA adresses but dont want a dangling resource manager,
         #SO
-        rm=pyvisa.ResourceManager()
-        addresses=rm.list_resources()
-        rm.close()
+        if len(addresses)==0:
+            rm=pyvisa.ResourceManager()
+            addresses=rm.list_resources()
+            rm.close()
+        #if addresses are supplied through the script which calls this util, we dont need to poll all instruments
+        #speeds up loading the util
         self.Com=tk.StringVar(LockinTabFrame,"GPIB Address")
         self.ComEntry=tk.OptionMenu(LockinTabFrame,self.Com,*addresses)
         self.ComEntry.grid(column=0,row=1)
