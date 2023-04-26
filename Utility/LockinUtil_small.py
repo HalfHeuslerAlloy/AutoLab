@@ -58,7 +58,6 @@ class Util(tk.Frame):
             rm.close()
         #if addresses are supplied through the script which calls this util, we dont need to poll all instruments
         #speeds up loading the util
-        rm.close()
         self.Com=tk.StringVar(LockinTabFrame,"GPIB Address")
         self.ComEntry=tk.OptionMenu(LockinTabFrame,self.Com,*addresses)
         self.ComEntry.grid(column=0,row=1)
