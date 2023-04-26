@@ -30,7 +30,7 @@ class Util(tk.Frame):
                 "200 mV/nA","500 mV/nA","1 V/uA"] 
     
     TCvalues=["10 us","30 us","100 us","300 us","1 ms","3 ms","10 ms","30 ms","100 ms",
-              "30 ms","1 s","3 s","10 s","30 s","100 s","300 s",
+              "300 ms","1 s","3 s","10 s","30 s","100 s","300 s",
               "1 ks","3 ks","10 ks","30 ks"]
 
     
@@ -135,7 +135,8 @@ class Util(tk.Frame):
             except ValueError:
                 print("Did Not Change Y offset")
             
-            if X_OffToSend and Y_OffToSend == 0:
+            if X_OffToSend ==0 and Y_OffToSend == 0 and ApplyExpands != 0: 
+                #if ApplyExpands is 0, we're trying to disable the Offsets, so we need to handle the case where no value has been entered in the Dialogues
                 print("No Valid Offsets Detected, Did Not Apply Offset/Expand Setting")
                 is_default[2]=True
         
