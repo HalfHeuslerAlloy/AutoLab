@@ -1,4 +1,5 @@
 from pyvisa.constants import StopBits, Parity
+import re
 
 class lakeshore350(object):
     
@@ -37,6 +38,58 @@ class lakeshore350(object):
         Temp = float(Temp)
         
         return Temp
+    
+    def getTempAll(self):
+        """
+        Gets the Temperature Reading in Kelvin for all channels
+
+        Returns
+        -------
+        A tuple of all the read temperatures
+
+        """
+        String_Temps=self.VI.query("KRDG? 0")
+        if String_Temps[-2:] == r"\n" or String_Temps[-2:] == r"\r":
+            String_Temps = String_Temps[:-2]
+        list_Temps=re.split(",",String_Temps)
+        return(tuple(float(i) for i in list_Temps))
+    
+    def getSensN(self,N):
+        """
+        Parameters:
+            str N: channel (A,B,C,D) to get Sensor Reading in Ohms
+
+        Returns:
+            float Temp : Sensor reading of channel N in Ohms
+        
+        desc:
+            from page 150 of lakeshore manual
+        """
+
+        if N not in "ABCD":
+            raise Exception()
+        Temp = self.inst.query("SRDG? "+ N )
+        
+        Temp.replace("\n","")
+        Temp.replace("\r","")
+        Temp = float(Temp)
+        
+        return Temp
+    
+    def getSensAll(self):
+        """
+        Gets the Sensor Reading in ohms for all channels
+
+        Returns
+        -------
+        A tuple of all the read resistances
+
+        """
+        String_Temps=self.VI.query("SRDG? 0")
+        if String_Temps[-2:] == r"\n" or String_Temps[-2:] == r"\r":
+            String_Temps = String_Temps[:-2]
+        list_Temps=re.split(",",String_Temps)
+        return(tuple(float(i) for i in list_Temps))
     
     def getTempSetpointN(self,N):
         """
