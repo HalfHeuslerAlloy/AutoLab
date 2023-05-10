@@ -16,6 +16,10 @@ class lakeshore350(object):
     
     def __del__(self):
         self.inst.close()
+    
+    def close(self):
+        self.inst.close()
+    
         
     def getTempN(self,N):
         """
@@ -48,7 +52,7 @@ class lakeshore350(object):
         A tuple of all the read temperatures
 
         """
-        String_Temps=self.VI.query("KRDG? 0")
+        String_Temps=self.inst.query("KRDG? 0")
         if String_Temps[-2:] == r"\n" or String_Temps[-2:] == r"\r":
             String_Temps = String_Temps[:-2]
         list_Temps=re.split(",",String_Temps)
@@ -85,7 +89,7 @@ class lakeshore350(object):
         A tuple of all the read resistances
 
         """
-        String_Temps=self.VI.query("SRDG? 0")
+        String_Temps=self.inst.query("SRDG? 0")
         if String_Temps[-2:] == r"\n" or String_Temps[-2:] == r"\r":
             String_Temps = String_Temps[:-2]
         list_Temps=re.split(",",String_Temps)
@@ -94,10 +98,10 @@ class lakeshore350(object):
     def getTempSetpointN(self,N):
         """
         Parameters:
-            str N: channel (A,B,C,D) to get temperature setpoint
+            str N: loop (1,2,3,4) to get temperature setpoint
 
         Returns:
-            float Temp: temperature setup of channel N 
+            float Temp: Setpoint of loop N. In whatever units its using at the time. 
         
         desc:
             from page 156 of lakeshore manual
@@ -116,7 +120,7 @@ class lakeshore350(object):
     def setTempSetpointN(self,N,Temp):
         """
         Parameters:
-            int N: channel to get temperature from in kelvin
+            int N: Loop to set the setpoint to. NOTE; DOES NOT CHECK IF ITS KELVIN OR NOT.
         
         desc:
             from page 156 of lakeshore manual
@@ -127,7 +131,7 @@ class lakeshore350(object):
         """
 
         Parameters:
-            int N: output channel to get status
+            int N: output loop to get status
         Returns:
             int Mode: mode of channel:
                 0 = off
