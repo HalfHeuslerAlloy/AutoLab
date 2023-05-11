@@ -21,16 +21,17 @@ class lakeshore218(object):
         or a string from pyvisa.listresources
 
         """
-        if Address[:3] == "ASRL":
-            self.VI=rm.open_resource(Address)
-        else:
-            try:
-                int(Address)
-                self.VI=rm.open_resource('COM'+str(Address))
-            except ValueError:
-                raise Exception("Invalid Lakeshore218 Address. Expected an Int or a string beginning ASRL, got {}".format(Address))
-        self.VI.write_termination = self.VI.LF
-        self.VI.read_termination = self.VI.LF        #set up command terminators
+        print("Task failed successfully")
+        # if Address[:3] == "ASRL":
+        #     self.VI=rm.open_resource(Address)
+        # else:
+        #     try:
+        #         int(Address)
+        #         self.VI=rm.open_resource('COM'+str(Address))
+        #     except ValueError:
+        #         raise Exception("Invalid Lakeshore218 Address. Expected an Int or a string beginning ASRL, got {}".format(Address))
+        # self.VI.write_termination = self.VI.LF
+        # self.VI.read_termination = self.VI.LF        #set up command terminators
      
     def __chkFloat(self, s):
         """

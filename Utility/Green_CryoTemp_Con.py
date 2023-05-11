@@ -45,7 +45,7 @@ class Util(tk.Frame):
         gbipLabel_218 = tk.Label(Utilframe,text="218 GPIB")
         gbipLabel_218.grid(column=0, row=1)
         self.gpib218Entry = tk.Entry(Utilframe,width = 5)
-        self.gpib218Entry.insert(tk.END,"25")
+        self.gpib218Entry.insert(tk.END,"6")
         self.gpib218Entry.grid(column=1, row=1)
         
         self.ConnectButton = tk.Button(Utilframe,
@@ -97,13 +97,15 @@ class Util(tk.Frame):
         """
         self.rm=pyvisa.ResourceManager()
         L350add=self.gpib350Entry.get()
-        L218add=self.gpib218Entry.get()#lakeshore addresses
+        L218add=int(self.gpib218Entry.get())#lakeshore addresses
+        print("Entering Try Statement {0} {1}".format(L350add,L218add))
         try:
             self.Tcon=Inst.lakeshore350(self.rm,int(L350add))
-            self.Tmon=Inst.Lakeshore218(self.rm,int(L218add))
+            self.Tmon=Inst.lakeshore218(self.rm,L218add)
             self.ConnectButton.configure(bg="green",text="Disconnect",command=self.Disconnect)
             self.Is_connected=True
         except Exception as e:
+            print("Error Found In Connection")
             self.ConnectButton.configure(bg="red")
             print(e)
         

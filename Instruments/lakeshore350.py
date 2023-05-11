@@ -6,12 +6,12 @@ class lakeshore350(object):
     def __init__(self, rm, channel):
         super(lakeshore350,self).__init__()
         self.inst = rm.open_resource('COM'+str(channel),
-                                     baud_rate=57600,
-                                     data_bits=7,
-                                     parity=Parity.odd,
-                                     stop_bits=StopBits.one
-                                     )
-        
+                                      baud_rate=57600,
+                                      data_bits=7,
+                                      parity=Parity.odd,
+                                      stop_bits=StopBits.one
+                                      )
+
         
     
     def __del__(self):
