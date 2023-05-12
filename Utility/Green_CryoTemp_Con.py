@@ -12,6 +12,7 @@ import time
 import pyvisa
 import Instruments as Inst
 from time import sleep
+from multiprocessing import Process, Queue, Pipe
 
 class Util(tk.Frame):
     """Controller widget for Temperature control of the Green Cryo
@@ -70,7 +71,7 @@ class Util(tk.Frame):
         self.setpoint_entry.grid(column = 2, row =1)
         self.setpoint_Button = tk.Button(Utilframe,
                                          text="Apply Setpoint",
-                                         #command= self.set_Setpoint
+                                         command= self.set_Setpoint
                                          )
         self.setpoint_Button.grid(column = 3, row =1)
         
@@ -86,7 +87,7 @@ class Util(tk.Frame):
         
         self.Toggle_Monitor = tk.Button(Utilframe,
                                          text="Toggle\nMonitor",
-                                         #command= self.toggle_monitoring,
+                                         #command= self.Start_monitoring,
                                          height=5
                                          )
         self.Toggle_Monitor.grid(column = 6, row =0, rowspan=5)
@@ -98,7 +99,6 @@ class Util(tk.Frame):
         self.rm=pyvisa.ResourceManager()
         L350add=self.gpib350Entry.get()
         L218add=int(self.gpib218Entry.get())#lakeshore addresses
-        print("Entering Try Statement {0} {1}".format(L350add,L218add))
         try:
             self.Tcon=Inst.lakeshore350(self.rm,int(L350add))
             self.Tmon=Inst.lakeshore218(self.rm,L218add)
@@ -124,12 +124,16 @@ class Util(tk.Frame):
             self.ConnectButton.configure(bg="red")
             print(e)
             
-    def set_Setpoint(self):
+    def set_Setpoint(self, pipe=None):
         """
         If connected, set the Setpoint on the VTI on the 350. Using Loop/Output 1
         TO DO: Change to Zone. Currently uses fixed PID.
+        
+        Parameters:
+            
+            pipe= Python multiprocessing duplex pipe to send the setpoint command to.
         """
-        if self.Is_connected==True:
+        if self.Is_connected==True and self.Is_monitoring==False:
             try:
                 setpoint=float(self.setpoint_entry.get())
             except ValueError:
@@ -159,9 +163,26 @@ class Util(tk.Frame):
         self.StatusLabel["text"] = self.statusTemplate.format(*self.statParam)
         
     def Alloff(self):
-        self.Tcon.allOff()
+        if self.Isconnected == False:
+            rm=pyvisa.ResourceManager()
+            L350add=self.gpib350Entry.get()
+            Tcon=Inst.lakeshore350(self.rm,int(L350add))
+            Tcon.allOff()
+            Tcon.close()
+            rm.close()
+        else:            
+            self.Tcon.allOff()
         
     
-    
+    def Start_monitoring(self):
+        """
+        Starts a new thread to read and control the temperature controllers. 
+        NOTE: While monitoring, all commands have to be sent via the pipe.
+
+        Returns
+        -------
+        None.
+
+        """
 
             
