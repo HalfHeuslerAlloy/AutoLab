@@ -20,10 +20,11 @@ class Handler(tk.Frame):
     """
     Measurement worker of the main AutoLab window
     """
-    def __init__(self, master):
+    def __init__(self, master, parent):
         """
-        Initial setup of GUI widgets and the general window position
+        Preamble to set up the Main Script Frame
         """
+        self.parent = parent
         super().__init__(master)
         
         self.Worker = None

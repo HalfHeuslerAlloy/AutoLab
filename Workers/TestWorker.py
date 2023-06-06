@@ -22,10 +22,11 @@ class Handler(ttk.Notebook):
     """
     Measurement worker of the main AutoLab window
     """
-    def __init__(self, master):
+    def __init__(self, master, parent):
         """
         Preamble to set up the Main Script Frame
         """
+        self.parent = parent
         super().__init__(master)
         self.Util_List=[]#list to append tabs to, so that the Autolab wrapper can access them 
         self.Worker = None
@@ -70,7 +71,8 @@ class Handler(ttk.Notebook):
         self.DwellEntry.insert(tk.END,"0.1")
         self.DwellEntry.pack()
         
-        
+        self.SkipButton = tk.Button(self.MainFrame,text="Skip",command=self.Skip)
+        self.SkipButton.pack()
         
         
     def Start(self,Pipe):
@@ -91,6 +93,19 @@ class Handler(ttk.Notebook):
             return False
         
         return True
+    
+    def Skip(self):
+        """
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        print("Sending skip command")
+        self.parent.PipeRecv.send("SKIP")
+        
     
     def Stop(self):
         """
@@ -115,6 +130,9 @@ def Worker(Pipe,Str,Stp,Steps,Dwl):
         if Pipe.poll():
             Comm = Pipe.recv()
             if Comm=="STOP":
+                break
+            if Comm=="SKIP":
+                print("Skipping")
                 break
         
         X = x

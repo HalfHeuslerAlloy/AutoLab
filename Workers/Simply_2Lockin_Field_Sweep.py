@@ -26,10 +26,11 @@ class Handler(ttk.Notebook):
     """
     Measurement worker of the main AutoLab window
     """
-    def __init__(self, master):
+    def __init__(self, master, parent):
         """
-        Preamble to set up the Main Script Frame        
+        Preamble to set up the Main Script Frame
         """
+        self.parent = parent
         super().__init__(master)
         self.Worker = None
         self.MainFrame=tk.Frame(master)

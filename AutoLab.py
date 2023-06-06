@@ -15,8 +15,6 @@ Task:
     - More documentation
     - More Comments
     - Add missing error handling
-    - Add Utility for magnet, lockin controls
-    - Arroyo driver and also utility control
     - Make Resource manager fully multiprocessing compatible
     - Add more graph settings in utility tab
 """
@@ -39,7 +37,7 @@ import sys
 import os
 import datetime
 import time
-import importlib.util
+import importlib
 from pathlib import Path
 
 from multiprocessing import Process, Queue, Pipe
@@ -484,7 +482,7 @@ class Window(tk.Frame):
         for module in modules[1:]:
             self.MeasWorkerScript = getattr(self.MeasWorkerScript, module)
         
-        self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerBook)
+        self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerBook,self)
         
         self.MeasWorker = self.MeasWorkerScript.Worker           
         
