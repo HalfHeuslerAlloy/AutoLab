@@ -1,20 +1,25 @@
 from pyvisa.constants import StopBits, Parity
+import re
 
 class lakeshore350(object):
     
     def __init__(self, rm, channel):
         super(lakeshore350,self).__init__()
         self.inst = rm.open_resource('COM'+str(channel),
-                                     baud_rate=57600,
-                                     data_bits=7,
-                                     parity=Parity.odd,
-                                     stop_bits=StopBits.one
-                                     )
-        
+                                      baud_rate=57600,
+                                      data_bits=7,
+                                      parity=Parity.odd,
+                                      stop_bits=StopBits.one
+                                      )
+
         
     
     def __del__(self):
         self.inst.close()
+    
+    def close(self):
+        self.inst.close()
+    
         
     def getTempN(self,N):
         """
@@ -38,13 +43,65 @@ class lakeshore350(object):
         
         return Temp
     
+    def getTempAll(self):
+        """
+        Gets the Temperature Reading in Kelvin for all channels
+
+        Returns
+        -------
+        A tuple of all the read temperatures
+
+        """
+        String_Temps=self.inst.query("KRDG? 0")
+        if String_Temps[-2:] == r"\n" or String_Temps[-2:] == r"\r":
+            String_Temps = String_Temps[:-2]
+        list_Temps=re.split(",",String_Temps)
+        return(tuple(float(i) for i in list_Temps))
+    
+    def getSensN(self,N):
+        """
+        Parameters:
+            str N: channel (A,B,C,D) to get Sensor Reading in Ohms
+
+        Returns:
+            float Temp : Sensor reading of channel N in Ohms
+        
+        desc:
+            from page 150 of lakeshore manual
+        """
+
+        if N not in "ABCD":
+            raise Exception()
+        Temp = self.inst.query("SRDG? "+ N )
+        
+        Temp.replace("\n","")
+        Temp.replace("\r","")
+        Temp = float(Temp)
+        
+        return Temp
+    
+    def getSensAll(self):
+        """
+        Gets the Sensor Reading in ohms for all channels
+
+        Returns
+        -------
+        A tuple of all the read resistances
+
+        """
+        String_Temps=self.inst.query("SRDG? 0")
+        if String_Temps[-2:] == r"\n" or String_Temps[-2:] == r"\r":
+            String_Temps = String_Temps[:-2]
+        list_Temps=re.split(",",String_Temps)
+        return(tuple(float(i) for i in list_Temps))
+    
     def getTempSetpointN(self,N):
         """
         Parameters:
-            str N: channel (A,B,C,D) to get temperature setpoint
+            str N: loop (1,2,3,4) to get temperature setpoint
 
         Returns:
-            float Temp: temperature setup of channel N 
+            float Temp: Setpoint of loop N. In whatever units its using at the time. 
         
         desc:
             from page 156 of lakeshore manual
@@ -63,7 +120,7 @@ class lakeshore350(object):
     def setTempSetpointN(self,N,Temp):
         """
         Parameters:
-            int N: channel to get temperature from in kelvin
+            int N: Loop to set the setpoint to. NOTE; DOES NOT CHECK IF ITS KELVIN OR NOT.
         
         desc:
             from page 156 of lakeshore manual
@@ -74,7 +131,7 @@ class lakeshore350(object):
         """
 
         Parameters:
-            int N: output channel to get status
+            int N: output loop to get status
         Returns:
             int Mode: mode of channel:
                 0 = off
