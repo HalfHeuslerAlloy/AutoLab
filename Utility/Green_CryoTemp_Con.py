@@ -12,7 +12,8 @@ import time
 import pyvisa
 import Instruments as Inst
 from time import sleep
-from multiprocessing import Process, Queue, Pipe
+from Utility import Monitor_Window
+
 
 class Util(tk.Frame):
     """Controller widget for Temperature control of the Green Cryo
@@ -86,8 +87,8 @@ class Util(tk.Frame):
         self.StatusLabel.grid(column=5, row=0, rowspan=5)
         
         self.Toggle_Monitor = tk.Button(Utilframe,
-                                         text="Toggle\nMonitor",
-                                         #command= self.Start_monitoring,
+                                         text="Open\nTCon",
+                                         command= self.Start_monitoring,
                                          height=5
                                          )
         self.Toggle_Monitor.grid(column = 6, row =0, rowspan=5)
@@ -184,5 +185,13 @@ class Util(tk.Frame):
         None.
 
         """
+        # Mon_Window=tk.Toplevel(self.master)
+        # Mon_Window.title("Temp_Mon")
+        rm=pyvisa.ResourceManager()
+        address_list=rm.list_resources()
+        rm.close()
+        Monitor_Window.Mon_Win(self,address_list)#module is not callable
+        
 
-            
+        
+        
