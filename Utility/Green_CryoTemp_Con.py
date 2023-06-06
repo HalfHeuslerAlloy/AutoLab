@@ -26,10 +26,11 @@ class Util(tk.Frame):
     
     statParam = ["NAN","NAN","NAN","NAN"]
     
-    def __init__(self, master):
+    def __init__(self, master, parent):
         """
         Initial Setup of the Util Frame
         """
+        self.parent=parent
         super().__init__(master)
         Utilframe = tk.Frame(master)
         master.add(Utilframe,text="Temperature Reading")
@@ -187,9 +188,7 @@ class Util(tk.Frame):
         """
         # Mon_Window=tk.Toplevel(self.master)
         # Mon_Window.title("Temp_Mon")
-        rm=pyvisa.ResourceManager()
-        address_list=rm.list_resources()
-        rm.close()
+        address_list=self.parent.address_list
         Monitor_Window.Mon_Win(self,address_list)#module is not callable
         
 

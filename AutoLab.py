@@ -192,8 +192,6 @@ class Window(tk.Frame):
         
         self.SetupInstruments(setupFilename)
         
-
-        
         
         ############# Start/stop/busy frame ######################
         
@@ -306,12 +304,18 @@ class Window(tk.Frame):
         menuFrame['relief'] = 'raised'
         
         
+        menuFrame.grid_columnconfigure(0, weight=1)
         self.LoadMeasWorkerButton = tk.Button(menuFrame,text = "Load Script",command = self.LoadMeasWorker)
         self.LoadMeasWorkerButton.grid(column=0, row=0,sticky="w")
+        self.refreshButton=tk.Button(menuFrame,text="Refresh Comms",command=self.refresh_Address_list)
+        self.refreshButton.grid(column=5,row=0,sticky="e",padx=20)#button to re-poll rm.list_resources
     
     def SetupUtilTabs(self,SetupFile):
         
         print("Loading Utilities")
+        rm=pyvisa.ResourceManager()
+        self.address_list=rm.list_resources()
+        rm.close()#Create a list of Valid GPIB/COMS ports. Useful for passing to workers/utils
         
         file = open(SetupFile,"r")
         
@@ -336,7 +340,7 @@ class Window(tk.Frame):
                     print(tabStr)
                     utilTabModule = getattr(Utility, tabStr)
                     
-                    utilTabInst = utilTabModule.Util(self.UtilTabs)
+                    utilTabInst = utilTabModule.Util(self.UtilTabs,parent=self)
                     
                     self.utilTabModules[utilTabInst.name] = utilTabInst
                      
@@ -378,8 +382,18 @@ class Window(tk.Frame):
                 except Exception as e:
                     print(e)
                 
-        
+                
         file.close()
+    
+    def refresh_Address_list(self):
+        """
+        quick routine to re-poll the resource list.
+        TODO: Test this on a live rig
+
+        """
+        rm=pyvisa.ResourceManager()
+        self.address_list=rm.list_resources()
+        rm.close()
         
     ############################################
     ####### Matplotlib Graphing stuff ##########
