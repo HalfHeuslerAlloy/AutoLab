@@ -25,15 +25,20 @@ class Mon_Win:
     """
     Mode_Select=[ "Zone","Manual Control", "Manual PID"]
     SensorInput=["A","B","C","D"]
-    TC_Model=["Lakeshore 350"]
+    TC_Model=["Lakeshore 350"]#Temperature controller Models
+    TM_Model=["Lakeshore 218", "Lakeshore 350"]
     
-    def __init__(self, master,addresses=[]):
+    def __init__(self, master,parent,default_addresses):
+        #assume that the last element of the Default addresses is the temperature monitor
+        self.parent=parent
+        addresses=self.parent.address_list
         """Set up Temperature Monitoring GUI"""
         self.Window=tk.Toplevel()
         self.Window.title("Temperature Monitoring")
         self.Window.protocol("WM_DELETE_WINDOW",self.close_function)
         
-        Control_Frame=tk.Frame(self.Window)
+        Control_Frame=tk.Frame(self.Window,height = 330,width = 480)
+        Control_Frame.grid(column=0, row=1, rowspan=3,sticky="N"+"S")
         if len(addresses)==0:
             rm=pyvisa.ResourceManager()
             addresses=rm.list_resources()
@@ -51,14 +56,41 @@ class Mon_Win:
         self.Mode=tk.StringVar(Control_Frame,self.Mode_Select[0])
         self.Mode_Entry=tk.OptionMenu(Control_Frame,self.Mode,*self.Mode_Select)
         self.Mode_Entry.grid(column=3,row=0)
+# =============================================================================
+#         HEATER CONTROL WIGETS
+# =============================================================================
         self.setpoint_entry=tk.Entry(Control_Frame)
         self.setpoint_entry.insert(tk.END,"Enter Setpoint")
         self.setpoint_entry.grid(column = 0, row =1)
+        self.ramp_button=tk.Checkbutton(Control_Frame,text="Ramp Setpoint?")
+        self.ramp_button.grid(column=1,row=1)
+        self.ramp_entry=tk.Entry(Control_Frame)
+        self.ramp_entry.insert(tk.END,"Enter Ramp Rate")
+        self.ramp_entry.grid(column=2,row=1)
+        
+        #Setup Manual Heater Output, Hidden by default
+        self.power_Label=tk.Label(Control_Frame,text="Heater Power")
+        self.power_Label.grid(column=0,row=1)
+        self.power_Label.grid_remove()
+        self.power_Entry=tk.Scale(Control_Frame, from_=0, to=100, length=300, orient="horizontal",tickinterval=10)
+        self.power_Entry.grid(column=1,row=1,columnspan=3)
+        self.power_Entry.grid_remove()
+        self.range_Label=tk.Label(Control_Frame,text="Heater Range")
+        self.range_Label.grid(column=0,row=2)
+        self.range_Label.grid_remove()
+        
+        #setup PID entry, Hidden by Default
+        
+        
+        
+        
         self.setpoint_Button = tk.Button(Control_Frame,
                                          text="Activate",
-                                         #command= self.set_Setpoint
+                                         #command= self.set_Setpoint_Zone
                                          )
-        self.setpoint_Button.grid(column = 3, row =1)
+        self.setpoint_Button.grid(column = 5, row =1)
+        #Default is Zone, but the function to switch modes should have a 
+        #Method to change the command to the Appropriate mode
         
         self.Off_Button=tk.Button(Control_Frame,
                                          text = "All Off",
@@ -66,11 +98,13 @@ class Mon_Win:
                                          bg = "red",
                                          width=55
                                          )
-        self.Off_Button.grid(column = 0, row = 6, columnspan=4)
+        self.Off_Button.grid(column = 0, row = 6, columnspan=4,sticky="s")
         
         
-        Control_Frame.grid(column=0, row=1, rowspan=3)
-        
+
+        #frame weighting, from https://stackoverflow.com/questions/31844173/tkinter-sticky-not-working-for-some-frames
+        Control_Frame.grid_rowconfigure(0, weight=1)
+        Control_Frame.grid_columnconfigure(0, weight=1)
 # =============================================================================
 #         MONITORING GRAPH GUI, Stolen from Base Autolab
 # =============================================================================

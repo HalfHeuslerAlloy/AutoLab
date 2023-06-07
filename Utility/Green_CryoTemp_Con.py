@@ -188,8 +188,8 @@ class Util(tk.Frame):
         """
         # Mon_Window=tk.Toplevel(self.master)
         # Mon_Window.title("Temp_Mon")
-        address_list=self.parent.address_list
-        Monitor_Window.Mon_Win(self,address_list)#module is not callable
+        addresses=[int(self.gpib350Entry.get()),int(self.gpib218Entry.get())]
+        Monitor_Window.Mon_Win(self,self.parent,addresses)#module is not callable
         
 
         

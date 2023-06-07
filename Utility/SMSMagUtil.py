@@ -71,7 +71,6 @@ class Util(tk.Frame):
                                          )
         self.DisconnectButton.grid(column = 1, row = 2)
         
-        print(len(self.parent.address_list))
         SetpointEntryLabel = tk.Label(frame,text="Setpoint (T)")
         SetpointEntryLabel.grid(column = 2, row = 0)
         self.SetpointEntry = tk.Entry(frame,width = 10)
