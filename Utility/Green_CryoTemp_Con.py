@@ -189,7 +189,11 @@ class Util(tk.Frame):
         # Mon_Window=tk.Toplevel(self.master)
         # Mon_Window.title("Temp_Mon")
         addresses=[int(self.gpib350Entry.get()),int(self.gpib218Entry.get())]
-        Monitor_Window.Mon_Win(self,self.parent,addresses)#module is not callable
+        self.parent.Temperature_Monitor=Monitor_Window.Mon_Win(self,self.parent,addresses)
+        #Passes the Temperature Monitor to the Main Autolab script, where Workers can inherit it
+        #Note; I think the Base thing will be inheriting a bit much from this! 
+        #It only NEEDS the output of the Pipe and a way to send commands to the Controller. 
+        #TODO: Think.
         
 
         
