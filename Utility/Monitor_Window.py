@@ -5,7 +5,7 @@ Created on Thu Jun  1 17:35:23 2023
 @author: eencsk
 Class to manage the Temperature Monitoring Window. 
 Developed for the green cryostat but should be adaptable
-TODO:(In order of Importance) Write log files
+TODO:(In order of Importance) 
 Make Reconnecting to the Controllers POssible if Incorrect adresses supplied
 Stability Criteria for Measurements as a Fn of Temperature
 Unshow certain elements in the Monitor window (I.e Stage 1 Temperature)
@@ -13,21 +13,27 @@ Methods to Read Controller and Populate GUI with current values of, say, Setpoin
 Support for Non-Lakeshore 350 Temperature Controllers
 
 """
+#GUI Packages
 import tkinter as tk
-from multiprocessing import Process, Queue, Pipe
-import Instruments as Inst
-from Utility import GraphUtil
 from tkinter import ttk
+from multiprocessing import Process, Queue, Pipe
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 # Implement the default Matplotlib key bindings.
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 from matplotlib import ticker
+#Instrument Packages
+import Instruments as Inst
 import pyvisa
+#Export/String Packages
 import time
+import re
+import datetime
+import csv
+from os import path, mkdir
 
-class Mon_Win:
+class Mon_Win(tk.Frame):
     """
     Class for the Monitoring window GUI
     """
@@ -36,10 +42,18 @@ class Mon_Win:
     TC_Model=["Lakeshore 350"]#Temperature controller Models
     TM_Model=["Lakeshore 218", "Lakeshore 350"]#temperature Monitor models
     Heater_Range=["Off","5/2.5 mW","50/25 mW","500/250 mW","5/2.5 W","50/25 W"]#Delete as appropraite when you know the power
-    Temperature_Data=[]#empty list to append data to
+    Temperature_Keys=["VTI","Sample","1st Stage","2nd Stage","Magnet 1", "Magnet 2","Helium Pot","Switch Heater"]
+    Time_Data=[]
+    Temperature_Data=[]
+    Plot_Dict={} #Dictionary to append plots into
+    Colour_List=["#a10000","#a15000","#a1a100","#626262","#416600","#008141","#008282","#005682","#000056","#2b0057","#6a006a","#77003c"]
+    #Totally Innocent Colours to be passed to the plots so they dont randomise the colour every tick. 
+    
+    
     
     def __init__(self, master,parent,default_addresses):
         #assume that the last element of the Default addresses is the temperature monitor
+        super().__init__(master)#adds all the TK objects in
         self.parent=parent
         addresses=self.parent.address_list
         """Set up Temperature Monitoring GUI"""
@@ -128,7 +142,14 @@ class Mon_Win:
         self.Off_Button.grid(column = 0, row = 6, columnspan=4,sticky="s")
         
         
-
+        self.StartButton=tk.Button(Control_Frame,
+                                         text = "Start\n Logging",
+                                         command = self.UpdateWindow,
+                                         bg = "green",
+                                         height=5,
+                                         
+                                         )
+        self.StartButton.grid(column=7,row=0,rowspan=6)
         #frame weighting, from https://stackoverflow.com/questions/31844173/tkinter-sticky-not-working-for-some-frames
         # Control_Frame.grid_rowconfigure(0, weight=1)
         # Control_Frame.grid_columnconfigure(0, weight=1)
@@ -147,8 +168,14 @@ class Mon_Win:
         self.ax = self.fig.add_subplot(111)
 
         self.Plot1, = self.ax.plot([], [],"#000000",antialiased=False,linewidth=0.5)
-       
-        
+        # self.plotlist=[]
+        # for x in range (0,10):
+        #     self.plotlist.append(self.ax.plot([], [],antialiased=False,linewidth=0.5))
+            #add a plot for each Dataset that we can have.
+        for key in self.Temperature_Keys:
+            self.Plot_Dict[key]=self.ax.plot([],[],self.Colour_List[self.Temperature_Keys.index(key)],
+                                             antialiased=False,linewidth=0.5)
+            #set up dictionary of plots to append to.
         self.ax.set_facecolor("black")
         self.ax.grid(color="grey")
         self.ax.tick_params(axis='y', colors='#000000')
@@ -167,7 +194,7 @@ class Mon_Win:
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        
+        self.IsMonitoring=True
         self.Open_Pipes(default_addresses[0],TMon_Address=(default_addresses[1]))
         
 # =============================================================================
@@ -175,17 +202,33 @@ class Mon_Win:
 # =============================================================================
     def Open_Pipes(self,TCon_Address,TMon_Address=None):
         """
-        Opens the MultiThreading and initialises. 
+        Opens the MultiThreading, Create a Log File for Diagnostics and initialises. 
      
         """
         self.Temp_PipeRecv, self.Temp_PipeSend = Pipe(duplex=True)
-        self.Control=Process(target=(Controller),args=(self.Temp_PipeSend,TCon_Address,TMon_Address))
+        self.Control=Process(target=(Controller),args=(self.Temp_PipeSend,TCon_Address,self.Com.get() ,TMon_Address))
         self.Control.start()
-        self.Temp_PipeRecv.send("T; S; 0")#set setpoint to 0 so nothing stupid happens
+        self.Temp_PipeRecv.send("T; S; 0.001")#set setpoint to 0 so nothing stupid happens
+        time.sleep(0.1)
         self.Temp_PipeRecv.send("HMD; S; Z")#initialise Heater control in Zone mode, to match W. gui.
+        time.sleep(0.1)
         #Set Setpoint to 0 has to be there to prevent unintentional application of MAX POWER from Base
         #If the Setpoint was, say, 290K but actual T was 1.5 K.
-        self.UpdateWindow()
+        #if Logs arent there, create.
+        if path.exists(r".\LogFiles")==False:
+            LogPath=path.join(r".","LogFiles")
+            mkdir(LogPath)#Now Has created a Log File Directory
+        today=datetime.date.today()
+        Log_Name=(today.strftime("%Y%m%d"))+"_TempLog.txt"
+        self.Log_SavePath=path.join(r".\LogFiles",Log_Name)
+        #As Open_Pipes only gets called at instantisation, this should work across days.
+        self.Current_Log=open(self.Log_SavePath,"w")
+        self.Temperature_Log_Writer=csv.writer(self.Current_Log, delimiter='\t',quotechar='|')
+        #TAB GANG BAYBE
+        self.Temperature_Log_Writer.writerow(["Time","VTI Temperature","Sample_Temperature","1st Stage Temp","2nd Stage Temp","Magnet 1","Magnet 2", "He Pot", "Switch Heater"])
+        
+            
+       
     
     def close_function(self):
         """
@@ -194,6 +237,8 @@ class Mon_Win:
         """
         print("This will exit the multithreading gracefully")
         self.Temp_PipeRecv.send("STOP")
+        self.Current_Log.close()
+        self.IsMonitoring=False#use this to close anything that isnt in the pipes
         self.Window.destroy()
 # =============================================================================
 # UPDATE WINDOW FUNCTIONS
@@ -201,7 +246,7 @@ class Mon_Win:
     def Get_Pipe_Data(self):
         """   
         Check if the pipe has anything in it
-        Loads data from the pipe and adds it to the datasets
+        Loads data from the pipe and adds it to the datasets and writes to LogFile
         Stolen from Base Autolab
 
         """
@@ -214,27 +259,24 @@ class Mon_Win:
                 break
             
             #Check if there is something to recieve in the pipe
-            if not self.PipeRecv.poll():
-                break
+            if not self.Temp_PipeRecv.poll():
+               break
             
             #get data from pipe
-            Data = self.PipeRecv.recv()
-            
+            Data = self.Temp_PipeRecv.recv()
             #If data isn't a string append to rawdata list
+            
             if type(Data)!=str:
-                if len(self.Data) <= 10000:#will attempt to gather points every 0.1 s
-                    self.Data.append(Data)
-                else:
-                    del self.Data[0]#remove first point
-                    self.Data.append(Data)
+                self.current_Data=Data
             
             # TODO add more key work commands, NewFile, ClearGraph,
             elif Data=="Esc":
-                self.MeasureFinished()
+                #self.MeasureFinished()
                 break
             elif Data=="ClearGraph":
-                self.Data = []
+                self.Temperature_Data = []
                 continue
+        self.Temperature_Log_Writer.writerow(*self.current_Data)
     
     
     def UpdateWindow(self):
@@ -243,9 +285,11 @@ class Mon_Win:
         Avoid running long process here, must be quick as possible Again, Base Autolab Stuff
         """
         # Get data from the worker by reading the que
+        #while self.IsMonitoring==True:#want a way to stop the window update
         self.Get_Pipe_Data()
-        self.UpdateGraph()        
-        self.after(250,self.UpdateWindow)
+        self.UpdateGraph()
+        self.after(2500,self.UpdateWindow)
+    
         
     def UpdateGraph(self):
         """
@@ -253,11 +297,35 @@ class Mon_Win:
         Dataset available
 
         """
+
         try:
-            for Dataset in self.Data[-1][1:-2]:#1st Data POint will be the current time, so dont need. Last 2 Elements will be Bools so also dont need
-                self.Plot1.plot(self.Data[0],Dataset)
+            if len(self.Time_Data) <=10000:
+                self.Time_Data.append(self.current_Data[0])
+                self.Temperature_Data.append(self.current_Data[1::])
+                
+            else:
+                del(self.Time_Data[0])
+                del(self.Temperature_Data[0])
+                self.Time_Data.append(self.current_Data[0])
+                self.Temperature_Data.append(self.current_Data[1::])
+            
+            
+            for x in range (0,2):#Temp A, Temp B and Temperatures 1-6 On the 218
+                key=self.Temperature_Keys[x]
+                self.Plot_Dict[key][0].set_xdata(self.Time_Data)
+                self.Plot_Dict[key][0].set_ydata([el[x] for el in self.Temperature_Data])
+                time.sleep(0.1)
+            self.fig.canvas.draw()
+            self.ax.relim()
+            self.ax.autoscale()
         except Exception as e:
             print(e)
+            print("Error In Graph Update")
+            self.IsMonitoring=False
+            self.Temp_PipeRecv.send("STOP")
+            self.Window.destroy()
+            #if the graph throws an error it keeps compounding. Close window to avoid crashes/weird states.
+            #TODO: Make this error handling a little more graceful.
 # =============================================================================
 # ACT ON CONTROLLER FUNCTIONS        
 # =============================================================================
@@ -435,7 +503,6 @@ def Controller(Pipe,TCon_add,Backup_TConAdd, TMon_add=None):
 
     """
     rm = pyvisa.ResourceManager()
-    
     Abort = False
     IsRamping=False#Bool to tag if temperature is ramping
     IsStable=False#Placeholder for Stability criteria.
@@ -447,100 +514,109 @@ def Controller(Pipe,TCon_add,Backup_TConAdd, TMon_add=None):
             T_Mon=None
     except Exception as e:
         print(e)
-        isConnected=False
-        iterator=0
-        while isConnected==False:
-            try:
-                T_Con = Inst.lakeshore350(rm,Backup_TConAdd)
-                isConnected=True
-            except Exception:
-                iterator+=1
-                time.sleep(0.1)
-                if iterator == 10000:
-                    print("TIMEOUT ON RECONNECT")        
-                    Pipe.send("Esc")
-            #TODO: Test this
-                    return
-    
+        print("Error IN Connection")
+        Pipe.send("Esc")
+        # isConnected=False
+        # iterator=0
+        # while isConnected==False:
+        #     try:
+        #         T_Con = Inst.lakeshore350(rm,Backup_TConAdd)
+        #         isConnected=True
+        #     except Exception:
+        #         iterator+=1
+        #         time.sleep(0.1)
+        #         if iterator == 100:
+        #             print("TIMEOUT ON RECONNECT")        
+        #             
+        #     #TODO: Test this
+        #             return
+    print("Successfully Connected To Temperature Controller")
     while Abort == False:
-        Comm = Pipe.recv()
-        if Comm=="STOP":
-            Abort=True
-        Current_TCon=T_Con.getTAll()
+    
+        Current_TCon_VTI=T_Con.getTempN("A")
+        Current_TCon_Sample=T_Con.getTempN("B")
         if T_Mon != None:
-            Current_TMon=T_Mon.getTAll()
+            Current_TMon=T_Mon.getTempAll()
+            
         else:
             Current_TMon=[]
-        Pipe.send([time.time(),*Current_TCon,*Current_TMon,IsRamping,IsStable])#sends the current reading of the pipes to be read
-        time.sleep(0.1)
+        Pipe.send([time.time(),Current_TCon_VTI,Current_TCon_Sample,*Current_TMon,IsRamping,IsStable])#sends the current reading of the pipes to be read
+        
+        #time.sleep(0.25)
 # =============================================================================
 #         PIPE NOW CHECKS FOR INPUT
 # =============================================================================
-        if Comm =="ALLOFF":
-            T_Con.allOff()
-        elif Comm == "NORAMP":
-            T_Con.setRampRate(1,0,0)
-# =============================================================================
-#        PIPE NOW CHECKS FOR GET COMMANDS
-# =============================================================================
-        else:
-            Param=str(Comm).split(";")#TODO: Check that this works when no comms
-            if len(Param) ==2:#I'M VIOLATING MY OWN GUIDELINES AND YOU CANT STOP ME!!!
-            #In Essence, as the "Read" Command wont send a setpoint, we can take Param of Len 2 to always be a "Get" command
-            #Yes this does allow you to Send "T; Red Dragon Archfiend" as a valid get command but SHHH. 
-                if Param[0]=="HMD":
-                    mode=T_Con.getOutputMode(1)[0]
-                    if mode==3:
-                        mode="M0"
-                    elif mode==2:
-                        mode="Z"
-                    elif mode==1:
-                        mode="MP"
-                    Pipe.send(mode)
-                elif Param[0]=="T":
-                    Pipe.send(T_Con.getTempSetpointN(1))
-                elif Param[0]=="PO":
-                    Pipe.send(T_Con.readMout(1))
-                elif Param[0]=="PID":
-                    Pipe.send([T_Con.getPID(1)])
-                elif Param[0]=="RNG":
-                    Pipe.send(T_Con.getRange(1))
-                elif Param[0]=="RAMP":
-                    Pipe.send(T_Con.getRampRate(1))
-                else:
-                    print("Invalid Get Command")
-# =============================================================================
-#             PIPE NOW CHECKS FOR SET COMMANDS
-# =============================================================================
-            elif len(Param)==3:
-                #again, assuming a command with 3 things would be a Set command
-                if Param[0]=="HMD":
-                    if Param[2]=="M0":
-                        T_Con.setOutputMode(1,3)
-                    elif Param[2]=="Z":
-                        T_Con.setOutputMode(1,2)
-                    elif Param[2]=="MP":
-                        T_Con.setOutputMode(1,1)
-                    
-                elif Param[0]=="T":
-                    T_Con.setTempSetpointN(1,float(Param[2]))
-                elif Param[0]=="PO":
-                    T_Con.ManOut(1,float(Param[2]))
-                    Pipe.send(T_Con.readMout(1))
-                elif Param[0]=="PID":
-                    list_PID=Param[2].split(",")
-                    #break up PID into a Len3 list. This is why you split by semicolon in the first case
-                    T_Con.setPID(1,float(list_PID[0]),float(list_PID[1]),float(list_PID[2]))
-                elif Param[0]=="RNG":
-                    T_Con.setRange(1,int(Param[2]))
-                elif Param[0]=="RAMP":
-                    T_Con.setRampRate(1,1,float(Param[2]))
-                else:
-                    print("Invalid Set Command")
-# =============================================================================
-#             ERROR/DO NOTHING CASE
-# =============================================================================
+        if Pipe.poll():# If this isnt there, Pipe will Wait for input and do nothing
+            Comm = Pipe.recv()
+
+            if Comm=="STOP":
+                Abort=True
+            if Comm =="ALLOFF":
+                T_Con.allOff()
+            elif Comm == "NORAMP":
+                T_Con.setRampRate(1,0,0)
+    # =============================================================================
+    #        PIPE NOW CHECKS FOR GET COMMANDS
+    # =============================================================================
             else:
-                pass#should handle the Len1 case of nothing
-                print(len(Param))#debugging code fragment to delete
-            
+                Param=re.split(";", str(Comm))#TODO: Check that this works when no comms
+                if len(Param) ==2:#I'M VIOLATING MY OWN GUIDELINES AND YOU CANT STOP ME!!!
+                #In Essence, as the "Read" Command wont send a setpoint, we can take Param of Len 2 to always be a "Get" command
+                #Yes this does allow you to Send "T; Red Dragon Archfiend" as a valid get command but SHHH. 
+                    if re.search("HMD",Param[0]):
+                        mode=T_Con.getOutputMode(1)[0]
+                        if mode==3:
+                            mode="MO"
+                        elif mode==2:
+                            mode="Z"
+                        elif mode==1:
+                            mode="MP"
+                        Pipe.send(mode)
+                    elif re.search("T",Param[0]):
+                        Pipe.send(T_Con.getTempSetpointN(1))
+                    elif re.search("PO",Param[0]):
+                        Pipe.send(T_Con.readMout(1))
+                    elif re.search("PID",Param[0]):
+                        Pipe.send([T_Con.getPID(1)])
+                    elif re.search("RNG",Param[0]):
+                        Pipe.send(T_Con.getRange(1))
+                    elif re.search("RAMP",Param[0]):
+                        Pipe.send(T_Con.getRampRate(1))
+                    else:
+                        print("Invalid Get Command")
+    # =============================================================================
+    #             PIPE NOW CHECKS FOR SET COMMANDS
+    # =============================================================================
+                elif len(Param)==3:
+                    #again, assuming a command with 3 things would be a Set command
+                    if re.search("HMD",Param[0]):
+                        
+                        if re.search("MO",Param[2]):
+                            T_Con.setOutputMode(1,3,1,0)
+                        elif re.search("Z",Param[2]):
+                            T_Con.setOutputMode(1,2,1,0)
+                        elif re.search("MP",Param[2]):
+                            T_Con.setOutputMode(1,1,1,0)
+                        
+                    elif re.search("T",Param[0]):
+                        T_Con.setTempSetpointN(1,float(Param[2]))
+                    elif re.search("PO",Param[0]):
+                        T_Con.ManOut(1,float(Param[2]))
+                        Pipe.send(T_Con.readMout(1))
+                    elif re.search("PID",Param[0]):
+                        list_PID=Param[2].split(",")
+                        #break up PID into a Len3 list. This is why you split by semicolon in the first case
+                        T_Con.setPID(1,float(list_PID[0]),float(list_PID[1]),float(list_PID[2]))
+                    elif re.search("RNG",Param[0]):
+                        T_Con.setRange(1,int(Param[2]))
+                    elif re.search("RAMP",Param[0]):
+                        T_Con.setRampRate(1,1,float(Param[2]))
+                    else:
+                        print("Invalid Set Command")
+        # =============================================================================
+        #             ERROR/DO NOTHING CASE
+        # =============================================================================
+                else:
+                    print("Invalid String Command Seen IN Temp. Controller! Got{}".format(Param))#debugging code fragment to delete
+                time.sleep(0.1)#allow buffer to clear before querying it again
+                

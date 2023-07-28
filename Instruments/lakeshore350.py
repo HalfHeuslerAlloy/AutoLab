@@ -12,7 +12,8 @@ class lakeshore350(object):
                                       stop_bits=StopBits.one
                                       )
 
-        
+        self.inst.write_termination = self.inst.LF
+        self.inst.read_termination = self.inst.LF
     
     def __del__(self):
         self.inst.close()
@@ -37,15 +38,17 @@ class lakeshore350(object):
             raise Exception()
         Temp = self.inst.query("KRDG? "+ N )
         
-        Temp.replace("\n","")
-        Temp.replace("\r","")
-        Temp = float(Temp)
         
-        return Temp
+
+        Temp=re.sub(r"\n","",Temp)
+        Temp=re.sub(r"\r","",Temp)#.replace doesnt work!!!
+        
+        return float(Temp)
     
     def getTempAll(self):
         """
         Gets the Temperature Reading in Kelvin for all channels
+        CURRENTLY BROKEN?
 
         Returns
         -------
@@ -53,8 +56,9 @@ class lakeshore350(object):
 
         """
         String_Temps=self.inst.query("KRDG? 0")
-        if String_Temps[-2:] == r"\n" or String_Temps[-2:] == r"\r":
-            String_Temps = String_Temps[:-2]
+        print(String_Temps)
+        String_Temps.replace("\n","")
+        String_Temps.replace("\r","")
         list_Temps=re.split(",",String_Temps)
         return(tuple(float(i) for i in list_Temps))
     
@@ -74,11 +78,11 @@ class lakeshore350(object):
             raise Exception()
         Temp = self.inst.query("SRDG? "+ N )
         
-        Temp.replace("\n","")
-        Temp.replace("\r","")
-        Temp = float(Temp)
+        Temp=re.sub(r"\n","",Temp)
+        Temp=re.sub(r"\r","",Temp)#.replace doesnt work!!!
+
         
-        return Temp
+        return float(Temp)
     
     def getSensAll(self):
         """
