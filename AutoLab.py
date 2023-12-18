@@ -581,13 +581,30 @@ class Window(tk.Frame):
                 self.y1Data = []
                 self.y2Data = []
                 continue
-            
+            elif Data=="NewFile":
+                self.CloseSaveFile()
+                self.CreateFile(self.filenameInput.get())
+                #now have new save file but want the plotted data to reflect whats in the file, 
+                #so duplicate the above fn.
+                self.Data = []
+                self.xData = []
+                self.y1Data = []
+                self.y2Data = []
+                continue
                 
             
             ##### Save data to save file ####
             
             #Convert Data list to string and remove the brackets
             if type(Data)==list:
+            #assume by this point data Has been sanitised, so can pass to routines w. impunity
+                try:
+                    self.MeasHandler.Update(Data)
+                    #pass Data to the measurement Handler in order to update GUI elements within the Worker
+                except AttributeError:
+                    pass
+                #Handle the case where there is no Update routine
+                    
                 Data = str(Data)
                 Data = Data.replace(", ",self.delimiterOption)
                 Data = Data[1:-1]+"\n" #removes brackets on either end and ameks new line
