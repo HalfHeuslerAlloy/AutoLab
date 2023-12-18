@@ -123,26 +123,28 @@ def Worker(Pipe,Str,Stp,Steps,Dwl):
     
     #column headers
     Pipe.send("X    Y1    Y2\n")
- 
-    for x in np.linspace(Str,Stp,int(Steps)):
-        #steps has to be broadcast as int explicitly for np 1.23.5
-        #Check for commands from controller
-        if Pipe.poll():
-            Comm = Pipe.recv()
-            if Comm=="STOP":
-                break
-            if Comm=="SKIP":
-                print("Skipping")
-                break
-        
-        X = x
-        
-        Y1 = np.sin(x)*x**1.2 + np.random.normal()
-        Y2 = np.cos(x)*x**1.2 + np.random.normal()
-        
-        Pipe.send([X,Y1,Y2])
-
-        time.sleep(Dwl)
+    for z in range(0,3):
+        for x in np.linspace(Str,Stp,int(Steps)):
+            #steps has to be broadcast as int explicitly for np 1.23.5
+            #Check for commands from controller
+            if Pipe.poll():
+                Comm = Pipe.recv()
+                if Comm=="STOP":
+                    break
+                if Comm=="SKIP":
+                    print("Skipping")
+                    break
+            
+            X = x
+            
+            Y1 = np.sin(x)*x**z + np.random.normal()
+            Y2 = np.cos(x)*x**z + np.random.normal()
+            
+            Pipe.send([X,Y1,Y2])
+    
+            time.sleep(Dwl)
+        print("Finished Loop {}".format(z+1))
+        Pipe.send("NewFile")
     
     Pipe.send("Esc")
 

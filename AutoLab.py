@@ -581,7 +581,16 @@ class Window(tk.Frame):
                 self.y1Data = []
                 self.y2Data = []
                 continue
-            
+            elif Data=="NewFile":
+                self.CloseSaveFile()
+                self.CreateFile(self.filenameInput.get())
+                #now have new save file but want the plotted data to reflect whats in the file, 
+                #so duplicate the above fn.
+                self.Data = []
+                self.xData = []
+                self.y1Data = []
+                self.y2Data = []
+                continue
                 
             
             ##### Save data to save file ####
