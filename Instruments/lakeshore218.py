@@ -8,6 +8,7 @@ TODO: Impliment Curve Import from PC, Relay Configuration and In-situ logging in
 I'm probably NOT going to do that, I dont need to do that for this controller, but here you go. 
 """
 import re
+from pyvisa.constants import StopBits, Parity
 
 class lakeshore218(object):
     def __init__(self, rm, Address):
@@ -22,16 +23,26 @@ class lakeshore218(object):
 
         """
 
-        if Address[:3] == "ASRL":
-            self.VI=rm.open_resource(Address)
+        if Address == type(" "): #If the address is not a string the slice in next line dont work!
+            
+            if Address[:3] == "ASRL":
+                self.VI=rm.open_resource(Address,baud_rate=9600,data_bits=7,parity=Parity.odd,stop_bits=StopBits.one)
+            else:
+                raise Exception("Invalid Lakeshore 218 Address, Expected an Int or String Beginning ASRL, got {}".format(Address))
         else:
             try:
-                int(Address)
-                self.VI=rm.open_resource('COM'+str(Address))
+                self.VI=rm.open_resource('COM'+str(Address),baud_rate=9600,data_bits=7,parity=Parity.odd,stop_bits=StopBits.one)
             except ValueError:
                 raise Exception("Invalid Lakeshore218 Address. Expected an Int or a string beginning ASRL, got {}".format(Address))
         self.VI.write_termination = self.VI.LF
         self.VI.read_termination = self.VI.LF        #set up command terminators
+        
+        ID_Check=self.VI.query("*IDN?")
+        list_ID=re.split(",",ID_Check)
+        if re.search("MODEL218",list_ID[1]) == None:
+            #check that the IDN comes back with the expected IDN respense
+            self.inst.close()
+            raise Exception("Address {} is not a Lakeshore 218!".format(str(Address)))
      
     def __chkFloat(self, s):
         """
@@ -275,7 +286,7 @@ class lakeshore218(object):
 
         """
         try:
-            if int(N) not in range (1-9):
+            if int(N) not in range (1,9):
                 raise Exception("Invalid Channel ID. Expected a number between 1 and 8 got {}".format(int(N)))
         except ValueError:
             raise Exception("Channel ID could not be cast as Int. Check inputs")
@@ -313,7 +324,7 @@ class lakeshore218(object):
 
         """
         try:
-            if int(N) not in range (1-9):
+            if int(N) not in range (1,9):
                 raise Exception("Invalid Channel ID. Expected a number between 1 and 8 got {}".format(int(N)))
         except ValueError:
             raise Exception("Channel ID could not be cast as Int. Check inputs")

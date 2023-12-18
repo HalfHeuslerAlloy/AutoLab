@@ -26,10 +26,11 @@ class Util(tk.Frame):
     
     statParam = ["NAN","NAN","NAN","NAN"]
     
-    def __init__(self, master):
+    def __init__(self, master, parent):
         """
         Initial Setup of the Util Frame
         """
+        self.parent=parent
         super().__init__(master)
         Utilframe = tk.Frame(master)
         master.add(Utilframe,text="Temperature Reading")
@@ -38,16 +39,16 @@ class Util(tk.Frame):
         #Status or Turn off Heaters will connect first, Setting a setpoint will yell at foolhardy user
         self.Is_monitoring=False
         
-        gbipLabel_350 = tk.Label(Utilframe,text="350 GPIB")
+        gbipLabel_350 = tk.Label(Utilframe,text="350 COMS")
         gbipLabel_350.grid(column=0, row=0, pady=5)
         self.gpib350Entry = tk.Entry(Utilframe,width = 5)
-        self.gpib350Entry.insert(tk.END,"7")
+        self.gpib350Entry.insert(tk.END,"5")
         self.gpib350Entry.grid(column=1, row=0, pady=5)
         
-        gbipLabel_218 = tk.Label(Utilframe,text="218 GPIB")
+        gbipLabel_218 = tk.Label(Utilframe,text="218 COM")
         gbipLabel_218.grid(column=0, row=1)
         self.gpib218Entry = tk.Entry(Utilframe,width = 5)
-        self.gpib218Entry.insert(tk.END,"6")
+        self.gpib218Entry.insert(tk.END,"3")
         self.gpib218Entry.grid(column=1, row=1)
         
         self.ConnectButton = tk.Button(Utilframe,
@@ -187,10 +188,14 @@ class Util(tk.Frame):
         """
         # Mon_Window=tk.Toplevel(self.master)
         # Mon_Window.title("Temp_Mon")
-        rm=pyvisa.ResourceManager()
-        address_list=rm.list_resources()
-        rm.close()
-        Monitor_Window.Mon_Win(self,address_list)#module is not callable
+        addresses=[int(self.gpib350Entry.get()),int(self.gpib218Entry.get())]
+        monitor=Monitor_Window.Mon_Win(self,self.parent,addresses)
+        #Passes the Temperature Monitor to the Main Autolab script, where Workers can inherit it
+        #Note; I think the Base thing will be inheriting a bit much from this! 
+        #It only NEEDS the output of the Pipe and a way to send commands to the Controller. 
+        #TODO: Think.
+        self.parent.T_PipeRecv,self.parent.T_PipeSend=monitor.Temp_PipeRecv, monitor.Temp_PipeSend
+        #gives the parent access to the tmon pipes, which can be polled for temperatures
         
 
         

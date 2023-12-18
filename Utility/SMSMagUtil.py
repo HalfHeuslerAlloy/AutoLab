@@ -32,10 +32,10 @@ class Util(tk.Frame):
     
     statParam = ["NAN","NAN","NAN","NAN","NAN"]
     
-    def __init__(self, master):
+    def __init__(self, master,parent=None):
         
         super().__init__(master)
-        
+        self.parent=parent
         self.connected = False
         self.Mag = None
         
@@ -70,7 +70,6 @@ class Util(tk.Frame):
                                          command = self.GetStatusAndField,
                                          )
         self.DisconnectButton.grid(column = 1, row = 2)
-        
         
         SetpointEntryLabel = tk.Label(frame,text="Setpoint (T)")
         SetpointEntryLabel.grid(column = 2, row = 0)
@@ -150,7 +149,7 @@ class Util(tk.Frame):
             B = self.Mag.B
             time.sleep(0.1)
             self.Mag.inst.clear()
-            setB = self.Mag.MID()
+            setB = self.Mag.MID
             
             
             heaterStr = self.Mag.HeaterStatus

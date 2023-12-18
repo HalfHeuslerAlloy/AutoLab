@@ -32,7 +32,7 @@ class Util(tk.Frame):
     
     statParam = ["NAN","NAN","NAN","NAN","NAN"]
     
-    def __init__(self, master):
+    def __init__(self, master,parent=None):
         
         super().__init__(master)
         
