@@ -194,8 +194,11 @@ class Mon_Win(tk.Frame):
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        self.IsMonitoring=True
-        self.Open_Pipes(default_addresses[0],TMon_Address=(default_addresses[1]))
+        try:
+            self.Open_Pipes(default_addresses[0],TMon_Address=(default_addresses[1]))
+            self.IsMonitoring=True
+        except Exception as e:
+            print(e)
         
 # =============================================================================
 #  OPEN/CLOSE FUNCTIONS   
@@ -276,7 +279,7 @@ class Mon_Win(tk.Frame):
             elif Data=="ClearGraph":
                 self.Temperature_Data = []
                 continue
-        self.Temperature_Log_Writer.writerow(*self.current_Data)
+        self.Temperature_Log_Writer.writerow([*self.current_Data])
     
     
     def UpdateWindow(self):
@@ -285,10 +288,12 @@ class Mon_Win(tk.Frame):
         Avoid running long process here, must be quick as possible Again, Base Autolab Stuff
         """
         # Get data from the worker by reading the que
-        #while self.IsMonitoring==True:#want a way to stop the window update
         self.Get_Pipe_Data()
         self.UpdateGraph()
-        self.after(2500,self.UpdateWindow)
+        if self.IsMonitoring==True:
+            #Get_Pipe Data also Writes to File, so we want to stop that when we close the TMon.
+            #This Halts the Calling of Update Window if the IsMonitoring Bool is False
+            self.after(2500,self.UpdateWindow)
     
         
     def UpdateGraph(self):
@@ -551,7 +556,7 @@ def Controller(Pipe,TCon_add,Backup_TConAdd, TMon_add=None):
 
             if Comm=="STOP":
                 Abort=True
-            if Comm =="ALLOFF":
+            elif Comm =="ALLOFF":
                 T_Con.allOff()
             elif Comm == "NORAMP":
                 T_Con.setRampRate(1,0,0)

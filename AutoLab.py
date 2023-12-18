@@ -581,6 +581,7 @@ class Window(tk.Frame):
                 self.y1Data = []
                 self.y2Data = []
                 continue
+            
                 
             
             ##### Save data to save file ####

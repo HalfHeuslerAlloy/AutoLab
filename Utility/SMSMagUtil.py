@@ -149,7 +149,7 @@ class Util(tk.Frame):
             B = self.Mag.B
             time.sleep(0.1)
             self.Mag.inst.clear()
-            setB = self.Mag.MID()
+            setB = self.Mag.MID
             
             
             heaterStr = self.Mag.HeaterStatus

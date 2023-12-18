@@ -36,6 +36,13 @@ class lakeshore218(object):
                 raise Exception("Invalid Lakeshore218 Address. Expected an Int or a string beginning ASRL, got {}".format(Address))
         self.VI.write_termination = self.VI.LF
         self.VI.read_termination = self.VI.LF        #set up command terminators
+        
+        ID_Check=self.VI.query("*IDN?")
+        list_ID=re.split(",",ID_Check)
+        if re.search("MODEL218",list_ID[1]) == None:
+            #check that the IDN comes back with the expected IDN respense
+            self.inst.close()
+            raise Exception("Address {} is not a Lakeshore 218!".format(str(Address)))
      
     def __chkFloat(self, s):
         """

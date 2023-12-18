@@ -14,6 +14,13 @@ class lakeshore350(object):
 
         self.inst.write_termination = self.inst.LF
         self.inst.read_termination = self.inst.LF
+
+        ID_Check=self.inst.query("*IDN?")
+        list_ID=re.split(",",ID_Check)
+        if re.search("MODEL350",list_ID[1]) == None:
+            #check that the IDN comes back with the expected IDN respense
+            self.inst.close()
+            raise Exception("Address {} is not a Lakeshore 350!".format(str(channel))) 
     
     def __del__(self):
         self.inst.close()
