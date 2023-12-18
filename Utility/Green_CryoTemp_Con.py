@@ -31,6 +31,8 @@ class Util(tk.Frame):
         Initial Setup of the Util Frame
         """
         self.parent=parent
+        #Master is the Host ttk.Notebook the util is embedded into. Parent should be a 
+        #non-gui type script that can recieve the pipes (for adding to data, ect)
         super().__init__(master)
         Utilframe = tk.Frame(master)
         master.add(Utilframe,text="Temperature Reading")

@@ -597,6 +597,14 @@ class Window(tk.Frame):
             
             #Convert Data list to string and remove the brackets
             if type(Data)==list:
+            #assume by this point data Has been sanitised, so can pass to routines w. impunity
+                try:
+                    self.MeasHandler.Update(Data)
+                    #pass Data to the measurement Handler in order to update GUI elements within the Worker
+                except AttributeError:
+                    pass
+                #Handle the case where there is no Update routine
+                    
                 Data = str(Data)
                 Data = Data.replace(", ",self.delimiterOption)
                 Data = Data[1:-1]+"\n" #removes brackets on either end and ameks new line

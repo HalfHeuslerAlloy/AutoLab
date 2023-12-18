@@ -3,6 +3,7 @@
 Created on Fri May  6 14:59:33 2022
 
 @author: eenmv
+Test Worker for fiddling around with Multi-Parameter Loops.
 """
 
 import tkinter as tk
@@ -46,6 +47,10 @@ class Handler(ttk.Notebook):
         """
         Initial setup of GUI widgets and the general window position
         """
+        LoopLabel=tk.Label(self.MainFrame, text="Loop Number")
+        LoopLabel.pack()
+        self.LoopText = tk.Message(self.MainFrame,font=200, relief = "sunken",text="Not Started")
+        self.LoopText.pack()
         
         StartEntryLabel = tk.Label(self.MainFrame,text="Start")
         StartEntryLabel.pack()
@@ -73,6 +78,8 @@ class Handler(ttk.Notebook):
         
         self.SkipButton = tk.Button(self.MainFrame,text="Skip",command=self.Skip)
         self.SkipButton.pack()
+        
+        
         
         
     def Start(self,Pipe):
@@ -106,6 +113,17 @@ class Handler(ttk.Notebook):
         print("Sending skip command")
         self.parent.PipeRecv.send("SKIP")
         
+    def Update(self, Data):
+        """
+        Update GUI Widgets with Relevant Data. 
+        Called during the Main Autolab Get Data routine (nested in the Update window routine)
+        so SPEED is the key
+        
+        Data:the data currently in the pipe in list form.
+
+        """
+        self.LoopText["text"]=Data[-1]
+        
     
     def Stop(self):
         """
@@ -123,26 +141,28 @@ def Worker(Pipe,Str,Stp,Steps,Dwl):
     
     #column headers
     Pipe.send("X    Y1    Y2\n")
- 
-    for x in np.linspace(Str,Stp,int(Steps)):
-        #steps has to be broadcast as int explicitly for np 1.23.5
-        #Check for commands from controller
-        if Pipe.poll():
-            Comm = Pipe.recv()
-            if Comm=="STOP":
-                break
-            if Comm=="SKIP":
-                print("Skipping")
-                break
-        
-        X = x
-        
-        Y1 = np.sin(x)*x**1.2 + np.random.normal()
-        Y2 = np.cos(x)*x**1.2 + np.random.normal()
-        
-        Pipe.send([X,Y1,Y2])
-
-        time.sleep(Dwl)
+    for z in range(0,3):
+        for x in np.linspace(Str,Stp,int(Steps)):
+            #steps has to be broadcast as int explicitly for np 1.23.5
+            #Check for commands from controller
+            if Pipe.poll():
+                Comm = Pipe.recv()
+                if Comm=="STOP":
+                    break
+                if Comm=="SKIP":
+                    print("Skipping")
+                    break
+            
+            X = x
+            
+            Y1 = np.sin(x)*x**z + np.random.normal()
+            Y2 = np.cos(x)*x**z + np.random.normal()
+            
+            Pipe.send([X,Y1,Y2,z])
+    
+            time.sleep(Dwl)
+        print("Finished Loop {}".format(z+1))
+        Pipe.send("NewFile")
     
     Pipe.send("Esc")
 
