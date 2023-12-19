@@ -139,9 +139,11 @@ class Handler(ttk.Notebook):
         
 def Worker(Pipe,Str,Stp,Steps,Dwl):
     
-    #column headers
-    Pipe.send("X    Y1    Y2\n")
+
+    
     for z in range(0,3):
+        #column headers, do it once per multi param loop.
+        Pipe.send("X    Y1    Y2\n")
         for x in np.linspace(Str,Stp,int(Steps)):
             #steps has to be broadcast as int explicitly for np 1.23.5
             #Check for commands from controller
