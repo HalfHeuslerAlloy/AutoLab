@@ -306,7 +306,10 @@ class DSP_7265(object):
         
     def getRefPhase(self):
         """Get the programed phase reference."""
-        return self.__chkFloat(self.VI.query('REFP.'))
+        # Strip '\x00' that is returned on 9.1 firmware
+        ref = self.VI.query('REFP.')
+        ref = ref.strip('\x00')
+        return self.__chkFloat(ref)
         
     def ConfigureInput(self, InDev = 'FET', Coupling = 'AC', Ground = 'GND', AcGain = 'Auto'):
         """
