@@ -73,7 +73,7 @@ class Handler(ttk.Notebook):
         
         self.SkipButton = tk.Button(self.MainFrame,text="Skip",command=self.Skip)
         self.SkipButton.pack()
-        
+
         
     def Start(self,Pipe):
         
