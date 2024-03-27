@@ -485,33 +485,33 @@ class Window(tk.Frame):
         """
         
         print("loading main script")
-        
-        #DESTROY this previous wokerframe if it exist
-        try:                
-            self.WorkerBook.destroy()
-   
-            importlib.reload(self.MeasWorkerScript)
-            #this will apply any changes made to the scripts as they are loaded.
-            self.update()
-        except AttributeError as e:
-            #should only really throw attribute error on initial bootup, as WorkerBook is not initialised
-            print(e)
-            pass
-
-        self.WorkerBook = ttk.Notebook(self.MeasTabs,height = 330,width = 480)
-        #as before, creates a holder-frame that can be destroyed while keeping the overall archetecture intact
-        self.WorkerBook.pack(side="bottom")
-        
-        
         #Get filename of Expirement GUI and worker
         filename = fd.askopenfile(initialdir = os.getcwd()+"\\Workers") #Open dialog box at desired folder
-        file_path = filename.name #this now contains the path to the relevant script
-        filename = filename.name[( len(os.getcwd())+1 ):-3]
-        Module_ID = filename.replace("/",".")
-        #importlib.import_module requires an ID in the format Package.subpackage.module, this supplies this nicely
         if filename==None:
+            print("Please Select a Script, dangus.")
             return
-        else:
+        
+        else: #now pressing the Cancel button shouldnt do anything, rather than breaking the script
+            #DESTROY this previous wokerframe if it exist
+            try:                
+                self.WorkerBook.destroy()
+       
+                importlib.reload(self.MeasWorkerScript)
+                #this will apply any changes made to the scripts as they are loaded.
+                self.update()
+            except AttributeError as e:
+                #should only really throw attribute error on initial bootup, as WorkerBook is not initialised
+                print(e)
+                pass
+
+            self.WorkerBook = ttk.Notebook(self.MeasTabs,height = 330,width = 480)
+            #as before, creates a holder-frame that can be destroyed while keeping the overall archetecture intact
+            self.WorkerBook.pack(side="bottom")
+            
+            file_path = filename.name #this now contains the path to the relevant script
+            filename = filename.name[( len(os.getcwd())+1 ):-3]
+            Module_ID = filename.replace("/",".")
+            #importlib.import_module requires an ID in the format Package.subpackage.module, this supplies this nicely
             self.MeasWorkerScript = importlib.import_module(Module_ID,file_path)
             #Only the Module we need has been loaded now, rather than everything in Workers
             #also means we can call importlib.reload on it to apply changes
