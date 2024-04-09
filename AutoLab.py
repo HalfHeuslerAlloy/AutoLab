@@ -258,7 +258,7 @@ class Window(tk.Frame):
             
             # flash the active icon
             FlashCycles = 4 # Number of cycles to switch flash on
-            
+            #TODO: Grey-Out things in the top-bar while measurement is running.
             if self.IndicatorFlashState<FlashCycles:
                 self.IndicatorLabel["image"] = self.Icons["ACTIVE"]
             else:
@@ -415,6 +415,12 @@ class Window(tk.Frame):
             self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerBook,self)
             #rebuild Handler Gui/Backend with refreshed Script
             self.MeasWorker = self.MeasWorkerScript.Worker
+            #now refresh the ancilliary things in the GraphUtilTab
+            try:
+                self.GraphUtilTab.Initialise_Dropdowns(self.MeasHandler.Header_List)
+            except AttributeError:
+                #if tehre is no Header list, you're stuck with the old Textboxes, enjoy!
+                self.GraphUtilTab.Initialise_Textboxes()
             print("Refreshed Current Worker Script!")
         except AttributeError:
             print("Cannot Refresh an Empty Script!")
@@ -519,6 +525,11 @@ class Window(tk.Frame):
             #     MeasWorkerScript = getattr(MeasWorkerScript, module)
             
             self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerBook,self)
+            try:
+                self.GraphUtilTab.Initialise_Dropdowns(self.MeasHandler.Header_List)
+            except AttributeError:
+                #if tehre is no Header list, you're stuck with the old Textboxes, enjoy!
+                self.GraphUtilTab.Initialise_Textboxes()
             
             self.MeasWorker = self.MeasWorkerScript.Worker           
             
@@ -585,40 +596,52 @@ class Window(tk.Frame):
                 break
             
             #get data from pipe
-            Data = self.PipeRecv.recv()
+            Data = self.PipeRecv.recv()#this should be a short list of data to be plotted/written to file
             
             #TODO make flags for drawning to graph
             #TODO unwraping multiple points
-            #If data isn't a string append to rawdata list
-            if type(Data)!=str:
-                self.Data.append(Data)
+            #If data isn't a string append to rawdata list for plotting
+            try:#
+                types=[type(ob) for ob in Data]
+                if str not in types:
+                    self.Data.append(Data)
+                    #This is the Data to be PLotted On-Screen, not what is saved to the save-file
+                    
+                # TODO add more key work commands, NewFile, ClearGraph,
+                elif Data=="Esc":
+                    self.MeasureFinished()
+                    break
+                elif Data=="ClearGraph":
+                    self.Data = []
+                    self.xData = []
+                    self.y1Data = []
+                    self.y2Data = []
+                    continue
+                elif Data=="NewFile":
+                    self.CloseSaveFile()
+                    self.CreateFile(self.filenameInput.get())
+                    #now have new save file but want the plotted data to reflect whats in the file, 
+                    #so duplicate the above fn.
+                    self.Data = []
+                    self.xData = []
+                    self.y1Data = []
+                    self.y2Data = []
+                    continue
                 
-            
-            # TODO add more key work commands, NewFile, ClearGraph,
-            elif Data=="Esc":
+            except TypeError as e:
+                #if Data is a single int/float, the types generator wont work. 
+                #because strings are lists of string characters, strings work fine.
+                #Not sure WHY you'd use a single data point, but Handle it and abort to prevent indexing problems w. graph
+                print(e)
+                print("Received Data that couldnt be iterated over, not sure what you're doing! Aborting.")
+                print(Data)
                 self.MeasureFinished()
                 break
-            elif Data=="ClearGraph":
-                self.Data = []
-                self.xData = []
-                self.y1Data = []
-                self.y2Data = []
-                continue
-            elif Data=="NewFile":
-                self.CloseSaveFile()
-                self.CreateFile(self.filenameInput.get())
-                #now have new save file but want the plotted data to reflect whats in the file, 
-                #so duplicate the above fn.
-                self.Data = []
-                self.xData = []
-                self.y1Data = []
-                self.y2Data = []
-                continue
                 
             
             ##### Save data to save file ####
             
-            #Convert Data list to string and remove the brackets
+            #Convert Data list to string and remove the brackets. This is what gets saved, so strings are OK.
             if type(Data)==list:
             #assume by this point data Has been sanitised, so can pass to routines w. impunity
                 try:
@@ -628,12 +651,12 @@ class Window(tk.Frame):
                     pass
                 #Handle the case where there is no Update routine
                     
-                Data = str(Data)
-                Data = Data.replace(", ",self.delimiterOption)
-                Data = Data[1:-1]+"\n" #removes brackets on either end and ameks new line
+                save_Data = str(Data)
+                save_Data = save_Data.replace(", ",self.delimiterOption)
+                save_Data = save_Data[1:-1]+"\n" #removes brackets on either end and ameks new line
             
-            #write Data to string
-            self.file.write( str(Data) )
+                #write Data to string
+                self.file.write( str(save_Data) )
 
     
     def CheckMeasureFinished(self):

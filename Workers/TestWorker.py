@@ -44,6 +44,11 @@ class Handler(ttk.Notebook):
         self.Util_List.append(self.UtilTab2)
         
         """
+        Data Format Section
+        """
+        self.Header_List=["X","Y1","Y2"]
+        
+        """
         Initial setup of GUI widgets and the general window position
         """
         
@@ -84,7 +89,7 @@ class Handler(ttk.Notebook):
         
         try:
 
-            self.Worker = Process(target=Worker, args=(Pipe,Str,Stp,Steps,Dwl))
+            self.Worker = Process(target=Worker, args=(Pipe,self.Header_List,Str,Stp,Steps,Dwl))
             self.Worker.start()
             
         except Exception as e:
@@ -119,10 +124,10 @@ class Handler(ttk.Notebook):
         return True
 
         
-def Worker(Pipe,Str,Stp,Steps,Dwl):
+def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
     
     #column headers
-    Pipe.send("X    Y1    Y2\n")
+    Pipe.send(Headers)
  
     for x in np.linspace(Str,Stp,int(Steps)):
         #steps has to be broadcast as int explicitly for np 1.23.5
