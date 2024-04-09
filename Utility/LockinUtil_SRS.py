@@ -42,7 +42,7 @@ class Util(tk.Frame):
     def __init__(self, master,title="Lockin Options",addresses=[]):
 
         super().__init__(master)
-        
+        self.title=title
         LockinTabFrame = tk.Frame(master)
         master.add(LockinTabFrame,text=title)
         ###LOCKIN NAME GUI ELEMENT###
