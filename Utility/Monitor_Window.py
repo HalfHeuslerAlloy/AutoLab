@@ -62,7 +62,7 @@ class Mon_Win(tk.Frame):
         self.Window.protocol("WM_DELETE_WINDOW",self.close_function)
         
         Control_Frame=tk.Frame(self.Window)#,height = 330,width = 480)
-        Control_Frame.grid(column=0, row=1,sticky="E"+"W")
+        Control_Frame.grid(column=0, row=1,sticky="E"+"W",columnspan=2)
         if len(addresses)==0:
             rm=pyvisa.ResourceManager()
             addresses=rm.list_resources()
@@ -150,9 +150,7 @@ class Mon_Win(tk.Frame):
                                          
                                          )
         self.StartButton.grid(column=7,row=0,rowspan=6)
-        #frame weighting, from https://stackoverflow.com/questions/31844173/tkinter-sticky-not-working-for-some-frames
-        # Control_Frame.grid_rowconfigure(0, weight=1)
-        # Control_Frame.grid_columnconfigure(0, weight=1)
+
 # =============================================================================
 #         MONITORING GRAPH GUI, Stolen from Base Autolab
 # =============================================================================
@@ -193,12 +191,43 @@ class Mon_Win(tk.Frame):
         toolbar = NavigationToolbar2Tk(self.canvas, self.GraphFrame)
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
+        
+# =============================================================================
+# STATUS SIDEBAR GUI ELEMENTS
+# =============================================================================
+        StatusFrame=tk.Frame(self.Window)
+        StatusFrame.grid(column=1,row=0)#frame to hold individual GUI elements
+        StatusFrame['padx']=5
+        StatusFrame["pady"]=5
+        VTILabel=tk.Label(StatusFrame,text="VTI Temperature")
+        VTILabel.grid(row=0,column=0)
+        self.VTI_Readout=tk.Message(StatusFrame,font=100, relief = "raised",text="VTI Temperature")
+        #message to Update w. values
+        self.VTI_Readout.grid(row=1,column=0)
+        SampleLabel=tk.Label(StatusFrame,text="Sample Temperature")
+        SampleLabel.grid(row=2,column=0)
+        self.Sample_Readout=tk.Message(StatusFrame,font=100, relief = "raised",text="Sample Temperature")
+        self.Sample_Readout.grid(row=3,column=0)
+        #VTI and sample readings are always needed, but would be nice to have a reading for other temperature elements
+        #Create Dropdown and a Modular box to cycle through as needed. 
+        #Default to Switch Heater, because its the most needed IMO
+        self.Modular_Selection=tk.StringVar(StatusFrame,self.Temperature_Keys[-1])
+        ModularSelector=tk.OptionMenu(StatusFrame,self.Modular_Selection,*self.Temperature_Keys)
+        ModularSelector.grid(row=4,column=0)
+        self.Modular_Readout=tk.Message(StatusFrame,font=100, relief = "raised",text="Selected Temperature")
+        self.Modular_Readout.grid(row=5,column=0)
+        
+# =============================================================================
+# GUI IS NOW INITIALISED, START THE MONITORING. DOESNT UPDATE GRAPH UNTILL START IS PRESSED       
+# =============================================================================
+        
         try:
             self.Open_Pipes(default_addresses[0],TMon_Address=(default_addresses[1]))
             self.IsMonitoring=True
         except Exception as e:
             print(e)
+            
+        
         
 # =============================================================================
 #  OPEN/CLOSE FUNCTIONS   
@@ -211,10 +240,16 @@ class Mon_Win(tk.Frame):
         self.Temp_PipeRecv, self.Temp_PipeSend = Pipe(duplex=True)
         self.Control=Process(target=(Controller),args=(self.Temp_PipeSend,TCon_Address,self.Com.get() ,TMon_Address))
         self.Control.start()
-        self.Temp_PipeRecv.send("T; S; 0.001")#set setpoint to 0 so nothing stupid happens
+
+        self.Temp_PipeRecv.send("T; G")
+        while self.Temp_PipeRecv.poll():
+            print("Connection Successful. Current Setpoint is {}").format(self.Temp_PipeRecv.recv())
+            break
         time.sleep(0.1)
         self.Temp_PipeRecv.send("HMD; S; Z")#initialise Heater control in Zone mode, to match W. gui.
         time.sleep(0.1)
+        #TODO; Find some way to counteract this, as its a pain if the heaters are turned off every time we
+        #initialise the software.
         #Set Setpoint to 0 has to be there to prevent unintentional application of MAX POWER from Base
         #If the Setpoint was, say, 290K but actual T was 1.5 K.
         #if Logs arent there, create.
@@ -272,7 +307,6 @@ class Mon_Win(tk.Frame):
             if type(Data)!=str:
                 self.current_Data=Data
             
-            # TODO add more key work commands, NewFile, ClearGraph,
             elif Data=="Esc":
                 #self.MeasureFinished()
                 break
@@ -295,6 +329,23 @@ class Mon_Win(tk.Frame):
             #This Halts the Calling of Update Window if the IsMonitoring Bool is False
             self.after(2500,self.UpdateWindow)
     
+    def UpdateStatus(self):
+        """
+        Take the data from the Pipe and update the tk.Messages in StatusFrame w. relevant data
+        NB: Assumes self.current_Data is the live data, and the data is in the format;
+        [current Time,VTI Temperature, Sample Temperature,
+                                       "1st Stage","2nd Stage","Magnet 1", "Magnet 2","Helium Pot",
+                                       "Switch Heater", isramping bool, is stablebool]
+        May want to make this more modular for other systems.
+        
+        """
+        self.VTI_Readout["text"]=str(self.current_Data[1])
+        self.Sample_Readout["text"]=str(self.current_Data[2])
+        #NB; May want to make this more modular if we end up using this 
+        modular_index=(self.Temperature_Keys.index(self.Modular_Selection.get()))+1
+        #+1 to skip the time parameter in the pipe
+        self.Modular_Readout["text"]=str(self.current_Data[modular_index])
+        
         
     def UpdateGraph(self):
         """
@@ -499,6 +550,9 @@ def Controller(Pipe,TCon_add,Backup_TConAdd, TMon_add=None):
     ----------
     Pipe : Pipe
         PipeSend to pass things through
+        Data is passed in the format; [current Time,VTI Temperature, Sample Temperature,
+                                       "1st Stage","2nd Stage","Magnet 1", "Magnet 2","Helium Pot",
+                                       "Switch Heater", isramping bool, is stablebool] 
     TCon_add : VISA address for the temperature Controller
     Backup_TConAdd: The contents of the GPIB entry from the gUI to allow Reconnecting if incorrect 
     Addresses entered.

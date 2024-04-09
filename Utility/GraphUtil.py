@@ -3,6 +3,7 @@
 Created on Thu Jul 21 16:02:22 2022
 
 @author: eenmv
+TODO: Make this compatible with plotting more than 2 things.
 """
 
 import tkinter as tk
@@ -21,7 +22,7 @@ import numpy as np
 
 class Util(tk.Frame):
     """
-    Test utility function
+    Graph PLotting Utility
     """
     
     #Name of utility so it can e refer to later as part of a dictionary
@@ -38,21 +39,34 @@ class Util(tk.Frame):
         
         self.XaxisEntryLabel = tk.Label(GraphUtilTab,text="X")
         self.XaxisEntryLabel.grid(column=0, row=0)
-        self.XaxisEntry = tk.Entry(GraphUtilTab,width = 10)
-        self.XaxisEntry.insert(tk.END,"0")
-        self.XaxisEntry.grid(column=0, row=1)
+        self.XaxisEntry=tk.StringVar(GraphUtilTab,"0")
+        #assign this to a StringVar, so that we can use .Entry or .OptionMenu to Modify these
+        self.XaxisEntry_box = tk.Entry(GraphUtilTab,textvariable=self.XaxisEntry,width = 10)
+        self.XaxisEntry_box.grid(column=0, row=1)
+        #now create dropdown to select column. Hidden by default
+        self.XaxisEntry_Dropdown=tk.OptionMenu(GraphUtilTab, self.XaxisEntry, ["A","B","C"])
+        self.XaxisEntry_Dropdown.grid(column=0,row=1)
+        self.XaxisEntry_Dropdown.grid_remove()
         
         self.Y1axisEntryLabel = tk.Label(GraphUtilTab,text="Y1")
         self.Y1axisEntryLabel.grid(column=1, row=0)
-        self.Y1axisEntry = tk.Entry(GraphUtilTab,width = 10)
-        self.Y1axisEntry.insert(tk.END,"1")
-        self.Y1axisEntry.grid(column=1, row=1)
+        self.Y1axisEntry=tk.StringVar(GraphUtilTab,"1")
+        self.Y1axisEntry_box = tk.Entry(GraphUtilTab,textvariable=self.Y1axisEntry,width = 10)
+        self.Y1axisEntry_box.grid(column=1, row=1)
+        
+        self.Y1axisEntry_Dropdown=tk.OptionMenu(GraphUtilTab, self.Y1axisEntry, ["A","B","C"])
+        self.Y1axisEntry_Dropdown.grid(column=1,row=1)
+        self.Y1axisEntry_Dropdown.grid_remove()
         
         self.Y2axisEntryLabel = tk.Label(GraphUtilTab,text="Y2")
         self.Y2axisEntryLabel.grid(column=2, row=0)
-        self.Y2axisEntry = tk.Entry(GraphUtilTab,width = 10)
-        self.Y2axisEntry.insert(tk.END,"2")
-        self.Y2axisEntry.grid(column=2, row=1)
+        self.Y2axisEntry=tk.StringVar(GraphUtilTab,"1")
+        self.Y2axisEntry_box = tk.Entry(GraphUtilTab,textvariable=self.Y2axisEntry,width = 10)
+        self.Y2axisEntry_box.grid(column=2, row=1)
+        
+        self.Y2axisEntry_Dropdown=tk.OptionMenu(GraphUtilTab, self.Y2axisEntry, ["A","B","C"])
+        self.Y2axisEntry_Dropdown.grid(column=2,row=1)
+        self.Y2axisEntry_Dropdown.grid_remove()
         
         self.Autoscale = tk.IntVar()
         self.Autoscale.set(True)
@@ -77,6 +91,8 @@ class Util(tk.Frame):
                                           variable=self.GraphSelectOption,
                                           value="2D")
         Graph2DOption.pack(anchor="w")
+        self.isTextbox=True
+        #bool to tell the update graph whether to parse strings as invalid or to compare to the list of columns
         
     def CreateGraph(self):
         """Creates the figure to put inside the graphic section of Autolab
@@ -157,27 +173,99 @@ class Util(tk.Frame):
             self.UpdateGraph1D(Data)
         else:
             self.UpdateGraph2D(Data)
+    
+    def Initialise_Dropdowns(self,column_List):
+        """
+        Import the column headers from the Measurement scripts and use them to
+        populate the dropdown menus. 
+
+        Parameters
+        ----------
+        column_List : List
+           list of strings containing the column headers
+
+
+        """
+        self.Data_Columns=column_List
+        #update list
+        self.XaxisEntry_box.grid_remove()
+        self.Y1axisEntry_box.grid_remove()
+        self.Y2axisEntry_box.grid_remove()
+        #hide the textbox entries
+        #from stackoverflow.com/questions/17580218
+        #Kind of jank. Only way to do it apparently is to delete the commands and then assign them manually
+        #clear the old menu choices
+        self.XaxisEntry_Dropdown["menu"].delete(0,"end")
+        self.Y1axisEntry_Dropdown["menu"].delete(0,"end")
+        self.Y2axisEntry_Dropdown["menu"].delete(0,"end")
+        
+        for option in column_List:
+            #assign commands from the column_list. in essence, manually recreate the option menu.
+            self.XaxisEntry_Dropdown["menu"].add_command(label=option,command=tk._setit(self.XaxisEntry, option))
+            self.Y1axisEntry_Dropdown["menu"].add_command(label=option,command=tk._setit(self.Y1axisEntry, option))
+            self.Y2axisEntry_Dropdown["menu"].add_command(label=option,command=tk._setit(self.Y2axisEntry, option))
+        try:
+            self.XaxisEntry.set(column_List[0])
+            self.Y1axisEntry.set(column_List[1])
+            self.Y2axisEntry.set(column_List[2])
+        except Exception as e:
+            print(e)
+            print("Fewer Than 3 Variables!!!")
+            self.Y2axisEntry.set(column_List[1])
+        
+        self.XaxisEntry_Dropdown.grid()
+        self.Y1axisEntry_Dropdown.grid()
+        self.Y2axisEntry_Dropdown.grid()
+        #shows the dropdowns
+        self.isTextbox=False
+        
+    def Initialise_Textboxes(self):
+        """
+        re-sets the Inital Textbox entry for columns.
+        Note: Does reset axes to be X=0,Y1=1,Y2=2 so that errors dont keep piling up.
+
+        """
+        self.XaxisEntry_Dropdown.grid_remove()
+        self.Y1axisEntry_Dropdown.grid_remove()
+        self.Y2axisEntry_Dropdown.grid_remove()
+        
+        self.XaxisEntry_box.grid()
+        self.Y1axisEntry_box.grid()
+        self.Y2axisEntry_box.grid()
+        #show the textbox entries
+        self.XaxisEntry.set("0")
+        self.Y1axisEntry.set("1")
+        self.Y2axisEntry.set("2")
+        self.isTextbox=True
+        
         
     def UpdateGraph1D(self,Data):
         
         try:
-            
-            xAxisSel = int(self.XaxisEntry.get())
-            Str = self.Y1axisEntry.get()
-            y1AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
-            Str = self.Y2axisEntry.get()
-            y2AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
-            
+            if self.isTextbox==True:
+                xAxisSel = int(self.XaxisEntry.get())
+                Str = self.Y1axisEntry.get()
+                y1AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
+                Str = self.Y2axisEntry.get()
+                y2AxisSel = [int(i) for i in Str.replace(" ","").split(",")]
+            else:
+                xAxisSel=self.Data_Columns.index(self.XaxisEntry.get())
+                y1AxisSel=self.Data_Columns.index(self.Y1axisEntry.get())
+                y2AxisSel=self.Data_Columns.index(self.Y2axisEntry.get())
+
             xData = [float(i[xAxisSel]) for i in Data]
-            
             y1Data = []
-            for Sel in y1AxisSel:
-                y1Data.append([float(i[Sel]) for i in Data])
-        
+            if type(y1AxisSel)!=int:#for when we can do lists to axis. Not now.
+                for Sel in y1AxisSel:
+                    y1Data.append([float(i[Sel]) for i in Data])
+            else:
+                y1Data.append(([float(i[y1AxisSel]) for i in Data]))
             y2Data = []
-            for Sel in y2AxisSel:
-                y2Data.append([float(i[Sel]) for i in Data])
-            
+            if type(y2AxisSel)!=int:#for when we can do lists to axis. Not now.
+                for Sel in y2AxisSel:
+                    y2Data.append([float(i[Sel]) for i in Data])
+            else:
+                y2Data.append(([float(i[y2AxisSel]) for i in Data]))
         except Exception as e:
             
             print(e)
@@ -187,7 +275,8 @@ class Util(tk.Frame):
             y2AxisSel = 2
             print("Invalid column selection")
             return
-        
+
+    
         self.Plot1.set_xdata(xData)
         self.Plot1.set_ydata(y1Data[0])
         self.Plot2.set_xdata(xData)

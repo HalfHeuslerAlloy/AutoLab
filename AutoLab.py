@@ -49,7 +49,7 @@ import Instruments
 
 import Utility
 
-import Workers
+#import Workers
 
 #Main class and window
 
@@ -258,7 +258,7 @@ class Window(tk.Frame):
             
             # flash the active icon
             FlashCycles = 4 # Number of cycles to switch flash on
-            
+            #TODO: Grey-Out things in the top-bar while measurement is running.
             if self.IndicatorFlashState<FlashCycles:
                 self.IndicatorLabel["image"] = self.Icons["ACTIVE"]
             else:
@@ -307,8 +307,13 @@ class Window(tk.Frame):
         menuFrame.grid_columnconfigure(0, weight=1)
         self.LoadMeasWorkerButton = tk.Button(menuFrame,text = "Load Script",command = self.LoadMeasWorker)
         self.LoadMeasWorkerButton.grid(column=0, row=0,sticky="w")
+       
         self.refreshButton=tk.Button(menuFrame,text="Refresh Comms",command=self.refresh_Address_list)
         self.refreshButton.grid(column=5,row=0,sticky="e",padx=20)#button to re-poll rm.list_resources
+        
+        self.rescriptButton=tk.Button(menuFrame,text="Refresh Scripts",command=self.refresh_Workers)
+        self.rescriptButton.grid(column=1,row=0,padx=20)#button to re-fresh the loaded script
+        
     
     def SetupUtilTabs(self,SetupFile):
         
@@ -395,6 +400,32 @@ class Window(tk.Frame):
         self.address_list=rm.list_resources()
         rm.close()
         
+    def refresh_Workers(self):
+        """
+        
+        Re-build the Measurement GUI by calling importlib.reload, and then Re-creating the WorkerBook and Handler
+
+        """
+        try:                
+            self.WorkerBook.destroy()
+            importlib.reload(self.MeasWorkerScript)
+            self.WorkerBook = ttk.Notebook(self.MeasTabs,height = 330,width = 480)
+            #as before, creates a holder-frame that can be destroyed while keeping the overall archetecture intact
+            self.WorkerBook.pack(side="bottom")
+            self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerBook,self)
+            #rebuild Handler Gui/Backend with refreshed Script
+            self.MeasWorker = self.MeasWorkerScript.Worker
+            #now refresh the ancilliary things in the GraphUtilTab
+            try:
+                self.GraphUtilTab.Initialise_Dropdowns(self.MeasHandler.Header_List)
+            except AttributeError:
+                #if tehre is no Header list, you're stuck with the old Textboxes, enjoy!
+                self.GraphUtilTab.Initialise_Textboxes()
+            print("Refreshed Current Worker Script!")
+        except AttributeError:
+            print("Cannot Refresh an Empty Script!")
+        
+        
     ############################################
     ####### Matplotlib Graphing stuff ##########
     ############################################
@@ -460,47 +491,50 @@ class Window(tk.Frame):
         """
         
         print("loading main script")
-        
-        #DESTROY this previous wokerframe if it exist
-        try:
-            self.WorkerBook.destroy()
-            self.update()   
-        except:
-            pass
-        
-        self.WorkerBook = ttk.Notebook(self.MeasTabs,height = 330,width = 480)
-        #as before, creates a holder-frame that can be destroyed while keeping the overall archetecture intact
-        self.WorkerBook.pack(side="bottom")
-        
-        
         #Get filename of Expirement GUI and worker
         filename = fd.askopenfile(initialdir = os.getcwd()+"\\Workers") #Open dialog box at desired folder
-        file_path = filename.name
-        filename = filename.name[( len(os.getcwd())+1 ):-3]
-        filename = filename.replace("/",".")
-        modules = filename.split(".")
         if filename==None:
+            print("Please Select a Script, dangus.")
             return
         
-#        spec = importlib.util.spec_from_file_location("Worker", file_path)
-#        module = importlib.util.module_from_spec(spec)
-#        
-#        sys.modules["Worker"] = module
-#        spec.loader.exec_module(module)
-        
-        #Load GUI and worker from filename
-        #self.MeasWorkerScript = __import__(filename, fromlist=[''])
-        
-        #self.MeasWorkerScript = sys.modules["Worker"]
-        self.MeasWorkerScript = Workers
-        for module in modules[1:]:
-            self.MeasWorkerScript = getattr(self.MeasWorkerScript, module)
-        
-        self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerBook,self)
-        
-        self.MeasWorker = self.MeasWorkerScript.Worker           
-        
-        print("Finished loading worker")
+        else: #now pressing the Cancel button shouldnt do anything, rather than breaking the script
+            #DESTROY this previous wokerframe if it exist
+            try:                
+                self.WorkerBook.destroy()
+       
+                importlib.reload(self.MeasWorkerScript)
+                #this will apply any changes made to the scripts as they are loaded.
+                self.update()
+            except AttributeError as e:
+                #should only really throw attribute error on initial bootup, as WorkerBook is not initialised
+                print(e)
+                pass
+
+            self.WorkerBook = ttk.Notebook(self.MeasTabs,height = 330,width = 480)
+            #as before, creates a holder-frame that can be destroyed while keeping the overall archetecture intact
+            self.WorkerBook.pack(side="bottom")
+            
+            file_path = filename.name #this now contains the path to the relevant script
+            filename = filename.name[( len(os.getcwd())+1 ):-3]
+            Module_ID = filename.replace("/",".")
+            #importlib.import_module requires an ID in the format Package.subpackage.module, this supplies this nicely
+            self.MeasWorkerScript = importlib.import_module(Module_ID,file_path)
+            #Only the Module we need has been loaded now, rather than everything in Workers
+            #also means we can call importlib.reload on it to apply changes
+            # for module in modules[1:]:
+            #     MeasWorkerScript = getattr(MeasWorkerScript, module)
+            
+            self.MeasHandler = self.MeasWorkerScript.Handler(self.WorkerBook,self)
+            try:
+                self.GraphUtilTab.Initialise_Dropdowns(self.MeasHandler.Header_List)
+            except AttributeError:
+                #if tehre is no Header list, you're stuck with the old Textboxes, enjoy!
+                self.GraphUtilTab.Initialise_Textboxes()
+            
+            self.MeasWorker = self.MeasWorkerScript.Worker           
+            
+            print("Finished loading worker")
+            return
         
     
     ################################################################
@@ -562,40 +596,52 @@ class Window(tk.Frame):
                 break
             
             #get data from pipe
-            Data = self.PipeRecv.recv()
+            Data = self.PipeRecv.recv()#this should be a short list of data to be plotted/written to file
             
             #TODO make flags for drawning to graph
             #TODO unwraping multiple points
-            #If data isn't a string append to rawdata list
-            if type(Data)!=str:
-                self.Data.append(Data)
+            #If data isn't a string append to rawdata list for plotting
+            try:#
+                types=[type(ob) for ob in Data]
+                if str not in types:
+                    self.Data.append(Data)
+                    #This is the Data to be PLotted On-Screen, not what is saved to the save-file
+                    
+                # TODO add more key work commands, NewFile, ClearGraph,
+                elif Data=="Esc":
+                    self.MeasureFinished()
+                    break
+                elif Data=="ClearGraph":
+                    self.Data = []
+                    self.xData = []
+                    self.y1Data = []
+                    self.y2Data = []
+                    continue
+                elif Data=="NewFile":
+                    self.CloseSaveFile()
+                    self.CreateFile(self.filenameInput.get())
+                    #now have new save file but want the plotted data to reflect whats in the file, 
+                    #so duplicate the above fn.
+                    self.Data = []
+                    self.xData = []
+                    self.y1Data = []
+                    self.y2Data = []
+                    continue
                 
-            
-            # TODO add more key work commands, NewFile, ClearGraph,
-            elif Data=="Esc":
+            except TypeError as e:
+                #if Data is a single int/float, the types generator wont work. 
+                #because strings are lists of string characters, strings work fine.
+                #Not sure WHY you'd use a single data point, but Handle it and abort to prevent indexing problems w. graph
+                print(e)
+                print("Received Data that couldnt be iterated over, not sure what you're doing! Aborting.")
+                print(Data)
                 self.MeasureFinished()
                 break
-            elif Data=="ClearGraph":
-                self.Data = []
-                self.xData = []
-                self.y1Data = []
-                self.y2Data = []
-                continue
-            elif Data=="NewFile":
-                self.CloseSaveFile()
-                self.CreateFile(self.filenameInput.get())
-                #now have new save file but want the plotted data to reflect whats in the file, 
-                #so duplicate the above fn.
-                self.Data = []
-                self.xData = []
-                self.y1Data = []
-                self.y2Data = []
-                continue
                 
             
             ##### Save data to save file ####
             
-            #Convert Data list to string and remove the brackets
+            #Convert Data list to string and remove the brackets. This is what gets saved, so strings are OK.
             if type(Data)==list:
             #assume by this point data Has been sanitised, so can pass to routines w. impunity
                 try:
@@ -605,12 +651,12 @@ class Window(tk.Frame):
                     pass
                 #Handle the case where there is no Update routine
                     
-                Data = str(Data)
-                Data = Data.replace(", ",self.delimiterOption)
-                Data = Data[1:-1]+"\n" #removes brackets on either end and ameks new line
+                save_Data = str(Data)
+                save_Data = save_Data.replace(", ",self.delimiterOption)
+                save_Data = save_Data[1:-1]+"\n" #removes brackets on either end and ameks new line
             
-            #write Data to string
-            self.file.write( str(Data) )
+                #write Data to string
+                self.file.write( str(save_Data) )
 
     
     def CheckMeasureFinished(self):

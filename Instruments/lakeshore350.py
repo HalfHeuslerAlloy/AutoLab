@@ -118,7 +118,7 @@ class lakeshore350(object):
             from page 156 of lakeshore manual
         """
 
-        if N not in "ABCD":
+        if N not in [1,2,3,4]:
             raise Exception()
         Temp = self.inst.query("SETP? "+ N )
         Temp = Temp.replace("\n","")
