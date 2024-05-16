@@ -204,6 +204,8 @@ class Util(tk.Frame):
         Lockin_Manager=Inst.SR830(rm,address)
         #create Metadata Dictionary
         Metadata={}
+        Metadata["Instrument"]="Lockin"
+        #because unlike other instruments the "Name" is user-defined, want something to Call out that this is a Lockin
         Metadata["Name"]=self.NameEntry.get()
         Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens())]
         Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]
