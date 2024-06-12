@@ -51,7 +51,7 @@ class Handler(ttk.Notebook):
         """
         Initial setup of GUI widgets and the general window position
         """
-        
+
         StartEntryLabel = tk.Label(self.MainFrame,text="Start")
         StartEntryLabel.pack()
         self.StartEntry = tk.Entry(self.MainFrame,width = 10)
@@ -78,8 +78,14 @@ class Handler(ttk.Notebook):
         
         self.SkipButton = tk.Button(self.MainFrame,text="Skip",command=self.Skip)
         self.SkipButton.pack()
-
         
+        data=[np.linspace(0,10,10),np.sin(np.linspace(0,10,10))]
+        self.preveiw=Utility.Preview_plot(self.MainFrame,data)
+        self.preveiw.TK_widget.pack(side="right")
+        
+
+
+
     def Start(self,Pipe):
         
         Str  = float(self.StartEntry.get())
