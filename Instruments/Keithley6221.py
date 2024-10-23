@@ -148,7 +148,7 @@ class Keithley6221(object):
         """
         try:
             Amp=float(Amplitude)
-            if 2E-12<=Amp<=1E-15:
+            if 2E-12<=Amp<=1E-1:
                 self.VI.write("SOUR:WAVE:AMPL {}".format(Amp))
             else:
                 raise ValueError("Invalid 6221 Amplitude, Saw {}".format(Amp))
