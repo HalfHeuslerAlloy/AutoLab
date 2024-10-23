@@ -57,6 +57,7 @@ class Handler(ttk.Notebook):
         self.StartEntry = tk.Entry(self.MainFrame,width = 10)
         self.StartEntry.insert(tk.END,"0")
         self.StartEntry.pack()
+
         
         StopEntryLabel = tk.Label(self.MainFrame,text="Stop")
         StopEntryLabel.pack()
@@ -128,6 +129,7 @@ class Handler(ttk.Notebook):
             return False
        
         return True
+    
 
         
 def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):

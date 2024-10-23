@@ -40,7 +40,7 @@ class Preview_plot():
         self.ax.tick_params(axis='y', colors='#000000')
         
         
-        self.Plot1 = self.ax.scatter(neo_data[0],neo_data[1],s=3,c="#77003c")
+        self.Plot1 = self.ax.plot(neo_data[0],neo_data[1],c="#77003c")
         self.canvas = FigureCanvasTkAgg(self.fig, master=parent_Frame)
         self.canvas.draw()
         self.TK_widget=self.canvas.get_tk_widget()
