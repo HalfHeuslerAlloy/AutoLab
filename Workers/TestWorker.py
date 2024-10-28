@@ -84,7 +84,10 @@ class Handler(ttk.Notebook):
         self.preveiw=Utility.Preview_plot(self.MainFrame,data)
         self.preveiw.TK_widget.pack(side="right")
         
-
+        self.TestDict={
+            "a":172,
+            "b":2188,
+            "this its the third element":"aaaaaaaaaaaaaaaaaaaaaaaa"}
 
 
     def Start(self,Pipe):
@@ -156,7 +159,6 @@ def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
         Pipe.send([X,Y1,Y2])
 
         time.sleep(Dwl)
-    
     Pipe.send("Esc")
 
 

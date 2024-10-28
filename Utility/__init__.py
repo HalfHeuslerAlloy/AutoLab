@@ -18,6 +18,7 @@ from .TimeUtil import *
 from .IPSMagUtil import *
 from .SMSMagUtil import *
 
+from .Keithley_Current_Source import *
 from .LockinUtil import *
 from .LockinUtil_big import*#7280 Lockin
 from .LockinUtil_small import*#7265 Lockin

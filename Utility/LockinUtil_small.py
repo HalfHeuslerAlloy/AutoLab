@@ -111,6 +111,7 @@ class Util(tk.Frame):
         #Currently in the order Sensitivity,TC,XOffset,YOffset,EnableOffset/Expand.
         #Feel Free to add more, but the list (and try/except statements) will need expanding.
         #T=no need to update F=Parameter Needs Updating.
+        #Edit 10.24 Why did I separate this into two halves?
         try:
             sens_to_send=(self.Sensvalues.index(self.Sensitivity.get()))+1 
             #for some reason, starts at 1, not 0
