@@ -324,6 +324,7 @@ class Mon_Win(tk.Frame):
         # Get data from the worker by reading the que
         self.Get_Pipe_Data()
         self.UpdateGraph()
+        self.UpdateStatus()
         if self.IsMonitoring==True:
             #Get_Pipe Data also Writes to File, so we want to stop that when we close the TMon.
             #This Halts the Calling of Update Window if the IsMonitoring Bool is False

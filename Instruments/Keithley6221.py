@@ -267,4 +267,48 @@ class Keithley6221(object):
         """
         self.VI.write("SOUR:WAVE:ABOR")
         return()
+# =============================================================================
+# SWEEP MODE PARAMETERS    
+# =============================================================================
+    def set_Sweep(self,list_currents=[]):
+        """
+        Sets or gets the Current Sweep from a list of current values
+
+        Parameters
+        ----------
+        list_currents : array-like
+            List of currents, has to be in the range it works at.
+
+        Returns
+        -------
+        If no list supplied, returns a Tuple of
+        Length 2 of Points,Current Lists.
+
+        """
+        if len(list_currents) !=0 :
+            out_current=str()
+            for current in list_currents:
+                try:
+                    current=float(current)#check that its a float
+                    if abs(current) < 0.1:
+                        out_current=out_current+(", {}").format(current)
+                    else:
+                        raise ValueError("Invalid 6221 DC current, saw {}").format(current)
+                except ValueError as e:
+                    raise e
+                    return()
+                out_current=out_current[1:]#as the first point has that comma, trim.
+                message="SOUR:LIST:CURR"+out_current
+                self.VI.write(message)
+                return()
+        else:
+            points=self.VI.query("SOUR:LIST:POIN?")
+            currents=self.VI.query("SOUR:LIST:CURR?")
+            return(tuple(points,currents))
     
+    def get_Data(self):
+        """
+        Returns the Data within the 2182.
+
+        """
+        return(self.VI.query("SENS:DATA"))

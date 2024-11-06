@@ -180,7 +180,7 @@ class Util(tk.Frame):
                 
         except Exception as e:
             print(e)
-            
+        rm.close()    
         return(Metadata)
             
             
