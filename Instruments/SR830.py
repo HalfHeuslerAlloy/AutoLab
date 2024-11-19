@@ -12,6 +12,7 @@ TODO: Impliment the Auto-Modes (Auto Phase, Auto Gain, Auto Offset, Auto Reserve
 """
 
 import numpy as np 
+root_two=np.sqrt(2)
 
 class SR830 (object):
     def __init__(self,rm,Comm_Address):
@@ -59,7 +60,7 @@ class SR830 (object):
         """
         if s[-2:] == r"\n":
             s = s[:-2]
-        s = [float(i) for i in s.split(",")]
+        s = np.array([float(i) for i in s.split(",")])
         return s
     
     def setTC(self, TC):
@@ -461,6 +462,22 @@ class SR830 (object):
     def Magnitude(self):
         """Returns Magnitude of lock-in measure."""
         return self.__chkFloat(self.VI.query('OUTP?3'))
+    @property
+    def X_PP(self):
+        """Returns peak-peak X component of lock-in measure."""
+        return (self.__chkFloat(self.VI.query('OUTP?1')))*root_two
+    @property
+    def Y_PP(self):
+        """Returns peak-peak Y component of lock-in measure."""
+        return (self.__chkFloat(self.VI.query('OUTP?2')))*root_two
+    @property
+    def XY_PP(self):
+        """Returns peak-peak XY component of lock-in measure."""
+        return (self.__chkFloatList(self.VI.query('SNAP?1,2')))*root_two#most likely to fall over
+    @property
+    def Magnitude_PP(self):
+        """Returns peak-peak Magnitude of lock-in measure."""
+        return (self.__chkFloat(self.VI.query('OUTP?3')))*root_two
     @property
     def Phase(self):
         """Returns Phase of lock-in measure."""
