@@ -120,7 +120,7 @@ class lakeshore350(object):
 
         if N not in [1,2,3,4]:
             raise Exception()
-        Temp = self.inst.query("SETP? "+ N )
+        Temp = self.inst.query("SETP? "+ str(N) )
         Temp = Temp.replace("\n","")
         Temp = Temp.replace("\r","")
 

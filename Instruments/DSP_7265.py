@@ -1,6 +1,6 @@
 import numpy as np
 import re
-
+root_two=np.sqrt(2)
 class DSP_7265(object):
     def __init__(self,rm, GPIB_Address, RemoteOnly = False):
         """
@@ -39,7 +39,7 @@ class DSP_7265(object):
     def __chkFloatList(self, s):
         if s[-2:] == r"\r":
             s = s[:-2]
-        s = [float(i) for i in s.split(",")]
+        s = np.array([float(i) for i in s.split(",")])#allows multiplication operations as is not a generic sequence?
         return s
         
     def RemoteOnly(self, rO = True):
@@ -482,6 +482,22 @@ class DSP_7265(object):
     def Magnitude(self):
         """Returns Magnitude of lock-in measure."""
         return self.__chkFloat(self.VI.query('MAG.'))
+    @property
+    def X_PP(self):
+        """Returns peak-peak X component of lock-in measure."""
+        return (self.__chkFloat(self.VI.query('X.')))*root_two
+    @property
+    def Y_PP(self):
+        """Returns peak-peak Y component of lock-in measure."""
+        return (self.__chkFloat(self.VI.query('Y.')))*root_two
+    @property
+    def XY_PP(self):
+        """Returns peak-peak XY component of lock-in measure."""
+        return (self.__chkFloatList(self.VI.query('XY.')))*root_two#most likely to fall over
+    @property
+    def Magnitude_PP(self):
+        """Returns peak-peak Magnitude of lock-in measure."""
+        return (self.__chkFloat(self.VI.query('MAG.')))*root_two
     @property
     def Phase(self):
         """Returns Phase of lock-in measure."""

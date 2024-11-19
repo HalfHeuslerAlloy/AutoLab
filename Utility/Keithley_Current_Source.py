@@ -139,7 +139,7 @@ class Util(tk.Frame):
                 print("Did Not Update 6221 Frequency")
             
             if Freq!=None:
-                K.WaveAmp(Freq)
+                K.WaveFrequency(Freq)
             
             K.Start_Wave()
             self.ApplyButton.configure(bg="green")
@@ -184,12 +184,5 @@ class Util(tk.Frame):
         return(Metadata)
             
             
-if __name__=="__main__":
-    
-    #Make and start main window
-    root = tk.Tk()
-    UtilTabs = ttk.Notebook(root,height = 100,width = 595)
-    UtilTabs.pack()
-    UtilTab = Util(UtilTabs)
-    UtilTab.mainloop()            
+            
             

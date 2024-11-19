@@ -22,6 +22,7 @@ class Keithley6221(object):
         GPIB_Address : int or string
             GPIB Address of device. An Int assumes that this is a channel on GPIB0.
             Much of the syntax should be the same for Ethernet or RS232 butI'm assuming GPIB
+            NB: 6221-2182 wont work over RS232
 
         """
         if type(GPIB_Address) != type(" "):
@@ -297,18 +298,122 @@ class Keithley6221(object):
                 except ValueError as e:
                     raise e
                     return()
-                out_current=out_current[1:]#as the first point has that comma, trim.
-                message="SOUR:LIST:CURR"+out_current
-                self.VI.write(message)
-                return()
+            out_current=out_current[1:]#as the first point has that comma, trim.
+            message="SOUR:LIST:CURR"+out_current
+            self.VI.write(message)
+            self.VI.write("SOUR:SWE:SPAC LIST")#sets the 6221 to use your defined list.
+            self.samples=int(len(list_currents))
+            #configures the buffer to accept a number of readings equal to the number of current points supplied
+            return()
         else:
-            points=self.VI.query("SOUR:LIST:POIN?")
+            points=self.VI.query("SOUR:LIST:CURR:POIN?")
             currents=self.VI.query("SOUR:LIST:CURR?")
             return(tuple(points,currents))
     
-    def get_Data(self):
+    def set_Range(self, Vrange=None):
         """
-        Returns the Data within the 2182.
+        Sets the voltage range within channel 1 of the 2182.
 
         """
-        return(self.VI.query("SENS:DATA"))
+        if Vrange is not None:
+            try:
+                float(Vrange)
+                if Vrange < 110:
+                    self.VI.write("SYST:COMM:SER:SEND VOLT:RANG {}".format(abs(Vrange)))
+                    self.VI.write("SYST:COMM:SER:SEND VOLT:RANG:AUTO OFF")
+                    #NO AUTO RANGING. KNOW WHAT YOU'RE MEASURING
+                    return()
+                else:
+                    raise ValueError("Invalid 2182 Range, saw {}").format(Vrange)
+            except ValueError as e:
+                raise e
+                return()
+        else:
+            self.VI.write("SYST:COMM:SER:SEND VOLT:RANG?")#sends read query
+            return(self.VI.query("syst:comm:ser:ENT?"))#gets the response from the query
+    
+    def define_Buffer(self,points=None, Current_Link=True):
+        """
+        set up the 2182 Buffer to feed and output on receipt of a Trigger signal
+
+        Parameters
+        ----------
+        points : Int, optional
+            NUmber of points in the desired buffer. The default is None.
+            
+        Current_Link: Bool, optional
+            Whether the sweep has been configed through the 6221. If this is the case, points does nothing,
+            and it attempts to get the number of points from self.samples.
+        Returns
+        -------
+        None.
+
+        """
+        if Current_Link==True:
+            try:
+                points=self.samples+1
+            except AttributeError:
+                raise Exception("List-Sweep Not Set up!")
+                return()
+        else:
+            
+            self.VI.write("SYST:COMM:SER:SEND TRAC:CLE")#Clear Buffer
+            self.VI.write("SYST:COMM:SER:SEND TRAC:POIN {}").format(points)#set buffer size
+            self.VI.write("SYST:COMM:SER:SEND TRAC:FEED SENS")
+            self.VI.write("SYST:COMM:SER:SEND TRAC:FEED:CONT NEXT")#now will continuously feed new measurements into the Buffer
+                
+    
+    
+    def arm_Sweep(self):
+        """
+        Sets the 6221/2182 Pair into a ready state to perform a DC IV sweep using the set list.
+        What we want to do is run through the trigger cycle of the 6221. We want the current source to step current,
+        send a trigger to the 2182, which then takes a measurement and feeds into Buffer. 
+        
+        NB: TRIG commands fire at every sweep step, but do not control the initiation of the entire cycle
+        ARM commands control the start of entire cycle and then are ignored.        
+        Returns
+        -------
+        None.
+
+        """
+        spacing=self.VI.query("SOUR:SWE:SPAC?")
+        if re.search("LIST", spacing) == None:
+            raise Exception ("6221 Not set into List-Sweep mode, please use the set_Sweep command first!")
+            return()#catch the case where someone tries this immediately after turn-on. 
+        #I think all the computation about the values can be handled by the scripts better tbh. 
+        self.VI.write("TRIG:SOUR TLINK")#set the 6221 to Accept a TLINK signal.
+        self.VI.write("SYST:COMM:SER:SEND TRIG:SOUR:EXT")#set the 2182 to accept an external Trigger
+        self.VI.write("SYST:COMM:SER:SEND TRIG:COUN INF")
+        self.VI.write("SYST:COMM:SER:SEND TRIG:DEL:AUTO ON")#Enables AUto-Delay #TODO-allow this to be configured
+        self.VI.write("SYST:COMM:SER:SEND INIT:CONT ON")#Sets the 2182 to be in the Trigger loop, out of the ARM loop.
+        self.VI.write("TRIG:ILINE 1")#Accepts input on line 1
+        self.VI.write("TRIG:OLINE 2")#Outputs a trigger on line 2(This setup is needed for the 2182)
+        self.VI.write("TRIG:DIR SOUR")#Enables the output of a trigger pulse.
+        
+    
+    def start_Sweep(self):
+        """
+        Start the sweep, 
+
+        Returns
+        -------
+        None.
+
+        """
+        self.VI.write("*CLS")#clear the registers. We'll use these to find when the sweep is finished. 
+        self.VI.write("TRAC:CLE")
+        sweep_finished=False
+        self.VI.write("INIT:IMM")#START!
+        while sweep_finished==False:
+            status=self.VI.query("STAT:OPER:EVEN?")#query event register
+            print(status)#debug fragment
+            if re.search("1066",status) is not None:#1066 is the event for a successful sweep
+                sweep_finished=True
+            #TODO: Add flags for other abort events, i.e abort on compliance.
+            
+        self.VI.write("SYST:COMM:SER:SEND TRAC:DATA?")
+        return(self.VI.query("SYST:COMM:SER:ENT?"))#should have the output of the sweep.
+        
+        
+        

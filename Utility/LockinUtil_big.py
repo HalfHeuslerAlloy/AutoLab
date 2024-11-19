@@ -46,8 +46,8 @@ class Util(tk.Frame):
         LockinTabFrame = tk.Frame(master)
         master.add(LockinTabFrame,text=title)
         ###LOCKIN NAME GUI ELEMENT###
-        self.NameEntry = tk.Entry(LockinTabFrame,width = 10)
-        self.NameEntry.insert(tk.END,"Lockin ID")
+        self.Name=tk.StringVar(LockinTabFrame,"Lockin ID")
+        self.NameEntry = tk.Entry(LockinTabFrame,textvariable=self.Name, width = 10)
         self.NameEntry.grid(column=0, row=0)
         ###COMMS GUI Element###
         #want this populated with valid VISA adresses but dont want a dangling resource manager,
