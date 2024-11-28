@@ -45,6 +45,11 @@ class Handler(ttk.Notebook):
         self.Util_List.append(self.UtilTab2)
         
         """
+        Metadata Section
+        """
+        self.Header_List=["X","Y1","Y2","Z"]
+        
+        """
         Initial setup of GUI widgets and the general window position
         """
         LoopLabel=tk.Label(self.MainFrame, text="Loop Number")
@@ -91,7 +96,7 @@ class Handler(ttk.Notebook):
         
         try:
 
-            self.Worker = Process(target=Worker, args=(Pipe,Str,Stp,Steps,Dwl))
+            self.Worker = Process(target=Worker, args=(Pipe,self.Header_List,Str,Stp,Steps,Dwl))
             self.Worker.start()
             
         except Exception as e:
@@ -137,13 +142,13 @@ class Handler(ttk.Notebook):
         return True
 
         
-def Worker(Pipe,Str,Stp,Steps,Dwl):
+def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
     
 
     
     for z in range(0,3):
         #column headers, do it once per multi param loop.
-        Pipe.send("X    Y1    Y2\n")
+        Pipe.send(Headers)
         for x in np.linspace(Str,Stp,int(Steps)):
             #steps has to be broadcast as int explicitly for np 1.23.5
             #Check for commands from controller

@@ -7,5 +7,3 @@ __all__ = []
 for basename in userFolders:
     if "__" not in basename:
         __all__ += [basename]
-
-from . import *
