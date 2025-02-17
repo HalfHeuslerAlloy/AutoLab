@@ -19,6 +19,7 @@ class DSP_7265(object):
         RemoteOnly : bool, optional
             Control remotely (T) or not (F).
         """
+
         if type(GPIB_Address) != type(" "):
             self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
         else:
@@ -28,6 +29,7 @@ class DSP_7265(object):
         self.VI.read_termination = self.VI.CR
         #self.VI = visa.instrument('GPIB0::' + str(GPIB_Address))
         self.RemoteOnly(RemoteOnly)
+
     def __del__(self):
         self.VI.close()
         

@@ -261,3 +261,21 @@ class SMS120C:
         
     def close(self):
         self.inst.close()
+    
+    # def programmable_Sweep(self,breakpoints,rates):
+    #     """
+    #     Sets up a multiple point magnet sweep between a list of break-points at defined rates
+    #     Starts a new thread to handle the magnet. TO DO: Work syncing this to the Measurement
+
+    #     Parameters
+    #     ----------
+    #     breakpoints : Array-Like
+    #         Array/List of Break-points
+    #     rates : TYPE
+    #        List of rates of the Same size as breakpoints
+
+    #     Returns
+    #     -------
+    #     None.
+
+    #     """

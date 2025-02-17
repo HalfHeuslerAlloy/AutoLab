@@ -5,28 +5,28 @@ class lakeshore350(object):
     
     def __init__(self, rm, channel):
         super(lakeshore350,self).__init__()
-        self.inst = rm.open_resource('COM'+str(channel),
+        self.VI = rm.open_resource('COM'+str(channel),
                                       baud_rate=57600,
                                       data_bits=7,
                                       parity=Parity.odd,
                                       stop_bits=StopBits.one
                                       )
 
-        self.inst.write_termination = self.inst.LF
-        self.inst.read_termination = self.inst.LF
+        self.VI.write_termination = self.VI.LF
+        self.VI.read_termination = self.VI.LF
 
-        ID_Check=self.inst.query("*IDN?")
+        ID_Check=self.VI.query("*IDN?")
         list_ID=re.split(",",ID_Check)
         if re.search("MODEL350",list_ID[1]) == None:
             #check that the IDN comes back with the expected IDN respense
-            self.inst.close()
+            self.VI.close()
             raise Exception("Address {} is not a Lakeshore 350!".format(str(channel))) 
     
     def __del__(self):
-        self.inst.close()
+        self.VI.close()
     
     def close(self):
-        self.inst.close()
+        self.VI.close()
     
         
     def getTempN(self,N):
@@ -43,7 +43,7 @@ class lakeshore350(object):
 
         if N not in "ABCD":
             raise Exception()
-        Temp = self.inst.query("KRDG? "+ N )
+        Temp = self.VI.query("KRDG? "+ N )
         
         
 
@@ -62,7 +62,7 @@ class lakeshore350(object):
         A tuple of all the read temperatures
 
         """
-        String_Temps=self.inst.query("KRDG? 0")
+        String_Temps=self.VI.query("KRDG? 0")
         print(String_Temps)
         String_Temps.replace("\n","")
         String_Temps.replace("\r","")
@@ -83,7 +83,7 @@ class lakeshore350(object):
 
         if N not in "ABCD":
             raise Exception()
-        Temp = self.inst.query("SRDG? "+ N )
+        Temp = self.VI.query("SRDG? "+ N )
         
         Temp=re.sub(r"\n","",Temp)
         Temp=re.sub(r"\r","",Temp)#.replace doesnt work!!!
@@ -100,7 +100,7 @@ class lakeshore350(object):
         A tuple of all the read resistances
 
         """
-        String_Temps=self.inst.query("SRDG? 0")
+        String_Temps=self.VI.query("SRDG? 0")
         if String_Temps[-2:] == r"\n" or String_Temps[-2:] == r"\r":
             String_Temps = String_Temps[:-2]
         list_Temps=re.split(",",String_Temps)
@@ -120,7 +120,7 @@ class lakeshore350(object):
 
         if N not in [1,2,3,4]:
             raise Exception()
-        Temp = self.inst.query("SETP? "+ str(N) )
+        Temp = self.VI.query("SETP? "+ str(N) )
         Temp = Temp.replace("\n","")
         Temp = Temp.replace("\r","")
 
@@ -136,7 +136,7 @@ class lakeshore350(object):
         desc:
             from page 156 of lakeshore manual
         """
-        self.inst.write("SETP "+ str( int(N) ) + "," + str(round(Temp,5)) )
+        self.VI.write("SETP "+ str( int(N) ) + "," + str(round(Temp,5)) )
         
     def getOutputMode(self,N):
         """
@@ -165,7 +165,7 @@ class lakeshore350(object):
             from page 153 of lakeshore manual
         """
         
-        Vals = self.inst.query("OUTMODE? "+ str( int(N) ) )
+        Vals = self.VI.query("OUTMODE? "+ str( int(N) ) )
         Vals = Vals.replace("\n","")
         Vals = Vals.replace("\r","")
         
@@ -204,7 +204,7 @@ class lakeshore350(object):
         """
         
 
-        self.inst.write("OUTMODE {0:0.0f},{1:0.0f},{2:0.0f},{3:0.0f}".format(N,Mode,Input,Powerup))
+        self.VI.write("OUTMODE {0:0.0f},{1:0.0f},{2:0.0f},{3:0.0f}".format(N,Mode,Input,Powerup))
         
     def allOff(self):
         """
@@ -243,12 +243,12 @@ class lakeshore350(object):
         if int(N) in range (1,5):
             if int(N)==1 or int(N)==2:
                 if int(PRange) in range (0,6):
-                    self.inst.write("RANGE {0},{1}".format(int(N),int(PRange)))
+                    self.VI.write("RANGE {0},{1}".format(int(N),int(PRange)))
                 else:
                     raise ValueError("Invalid Power Range for channel {}".format(N))
             elif int(N)==3 or int(N)==4:
                 if int(PRange) in range (0,2):
-                    self.inst.write("RANGE {0},{1}".format(int(N),int(PRange)))
+                    self.VI.write("RANGE {0},{1}".format(int(N),int(PRange)))
                 else:
                     raise ValueError("Invalid Power Range for channel {}".format(N))
             else:
@@ -272,7 +272,7 @@ class lakeshore350(object):
 
         """        
         if int(N) in range(1,5):
-            Vals = self.inst.query("RANGE? "+ str( int(N) ) )
+            Vals = self.VI.query("RANGE? "+ str( int(N) ) )
             Vals = Vals.replace("\n","")
             Vals = Vals.replace("\r","")
             return(int(Vals[0]))
@@ -302,7 +302,7 @@ class lakeshore350(object):
         """
         if int(N) in range(1,5):
             if 0.1<= float(P) <= 1000 and 0.1<= float(I) <= 1000 and 0 <= float(D) <=200:
-                self.inst.write("PID {0},{1},{2},{3}".format(int(N),float(P),float(I),float(D)))
+                self.VI.write("PID {0},{1},{2},{3}".format(int(N),float(P),float(I),float(D)))
             else:
                 raise Exception("Invalid PID values for Input {0}. P={1}, I={2}, D={3}".format(int(N),float(P),float(I),float(D)))
                 
@@ -325,7 +325,7 @@ class lakeshore350(object):
 
         """
         if int(N) in range(1,5):
-            Vals=self.inst.query("PID?"+str(int(N)))
+            Vals=self.VI.query("PID?"+str(int(N)))
             Vals = Vals.replace("\n","")
             Vals = Vals.replace("\r","")
             
@@ -357,7 +357,7 @@ class lakeshore350(object):
         if int(N) in range(1,5):
             if int(toggle) in (0,1):
                 if float(Rate) <=100:
-                    self.inst.write("RAMP {0},{1},{2}".format(int(N),int(toggle),float(Rate)))
+                    self.VI.write("RAMP {0},{1},{2}".format(int(N),int(toggle),float(Rate)))
                 else:
                     raise Exception("Ramp Rate too High! Max 100K/min")
             else:
@@ -385,7 +385,7 @@ class lakeshore350(object):
 
         """
         if int(N) in range(1,5):
-            Vals=self.inst.query("RAMP?"+str(int(N)))
+            Vals=self.VI.query("RAMP?"+str(int(N)))
             Vals = Vals.replace("\n","")
             Vals = Vals.replace("\r","")
             Vals = Vals.split(",")
@@ -411,7 +411,7 @@ class lakeshore350(object):
 
         """
         if int(N) in range(1,5):
-            Vals=self.inst.query("RAMPST?"+str(int(N)))
+            Vals=self.VI.query("RAMPST?"+str(int(N)))
             Vals = Vals.replace("\n","")
             Vals = Vals.replace("\r","")
 
@@ -440,9 +440,9 @@ class lakeshore350(object):
         """
         if int(N) in range(1,5):
             if 0<= float(power) <= 100:
-                self.inst.write("MOUT {0},{1}".format(int(N),float(power)))
+                self.VI.write("MOUT {0},{1}".format(int(N),float(power)))
             else:
-                self.inst.write("MOUT {},0".format(int(N)))
+                self.VI.write("MOUT {},0".format(int(N)))
                 raise Exception("Invalid Mout Power Given, set MOUT to 0 as a precaution")
         else:
             raise ValueError("Invalid Heater Channel to Set Manual Output")
@@ -461,7 +461,7 @@ class lakeshore350(object):
 
         """
         if int(N) in range(1,5):
-            Vals=self.inst.query("MOUT?"+str(int(N)))
+            Vals=self.VI.query("MOUT?"+str(int(N)))
             Vals = Vals.replace("\n","")
             Vals = Vals.replace("\r","")
             return(float(Vals))

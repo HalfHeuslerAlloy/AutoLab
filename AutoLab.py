@@ -601,13 +601,15 @@ class Window(tk.Frame):
             #TODO make flags for drawning to graph
             #TODO unwraping multiple points
             #If data isn't a string append to rawdata list for plotting
-            try:#
+            try:
                 types=[type(ob) for ob in Data]
+
                 if str not in types:
                     self.Data.append(Data)
                     #This is the Data to be PLotted On-Screen, not what is saved to the save-file
                     
                 # TODO add more key work commands, NewFile, ClearGraph,
+
                 elif Data=="Esc":
                     self.MeasureFinished()
                     break
@@ -631,10 +633,20 @@ class Window(tk.Frame):
             except TypeError as e:
                 #if Data is a single int/float, the types generator wont work. 
                 #because strings are lists of string characters, strings work fine.
-                #Not sure WHY you'd use a single data point, but Handle it and abort to prevent indexing problems w. graph
-                print(e)
-                print("Received Data that couldnt be iterated over, not sure what you're doing! Aborting.")
-                print(Data)
+                #But Exceptions are not indexable. If the Handler throws an exception we can catch it here to MakeToast
+                
+                if isinstance(Data,Exception):
+                    #Should catch any Exception object (Any exception, TypeError, AttrError...)
+                    #that is sent down the pipe.
+                    #Allows for Error-finding that won't get swamped by other statements on the Terminal.
+                    #TODO: This works, but doesnt allow information to be sent about WHAT caused the exception. 
+                    #Have to think about that because just sending a VISAError is not useful.
+                    print("Found an error!")
+                    print(Data)
+                else:
+                    print(e)
+                    print("Received Data that couldnt be iterated over, not sure what you're doing! Aborting.")
+                    print(Data)
                 self.MeasureFinished()
                 break
                 

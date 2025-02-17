@@ -159,6 +159,11 @@ def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
         Pipe.send([X,Y1,Y2])
 
         time.sleep(Dwl)
+    try:
+        Pipe.send(X[4])#nonsense. will throw an error.
+    except Exception as e:
+        Pipe.send(e)
+    
     Pipe.send("Esc")
 
 
