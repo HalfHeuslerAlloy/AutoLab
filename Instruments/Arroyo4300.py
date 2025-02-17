@@ -1,24 +1,23 @@
+from Instruments.Instrument_class import Instrument
 
-
-class Arroyo4300(object):
+class Arroyo4300(Instrument):
     
     def __init__(self, rm, channel):
-        super(Arroyo4300,self).__init__()
-        self.inst = rm.open_resource("COM"+str(int(channel)))
-        self.inst.baud_rate = 38400
-        self.inst.write("TERM 0\n")
+        super().__init__(rm, channel, GPIB=False, Baud_Rate=38400)
+
+        self.Write("TERM 0\n")
     
     def __del__(self):
-        self.inst.close()
+        self.VI.close()
         
     def OutputOn(self):
-        self.inst.write("LAS:OUT 1\n")
+        self.Write("LAS:OUT 1\n")
         
     def OutputOff(self):
-        self.inst.write("LAS:OUT 0\n")
+        self.Write("LAS:OUT 0\n")
     
     def IsOutputOn(self):
-        mess = self.inst.query("LAS:OUT?\n")
+        mess = self.Query("LAS:OUT?\n")
         
         if "1" in mess:
             return True
@@ -28,19 +27,19 @@ class Arroyo4300(object):
     def SetCurrent(self, mA):
         """Set the output current in mA
         """
-        self.inst.write("LAS:LDI " + str(mA)+"\n")
+        self.Write("LAS:LDI " + str(mA)+"\n")
     
     def GetCurrent(self):
         """Set the output current in mA
         """
-        mess = self.inst.query("LAS:LDI?\n")
+        mess = self.Query("LAS:LDI?\n")
         mA = float(mess.replace("\n",""))
         return mA
     
     def GetVoltage(self):
         """Gets the current output voltage (V)
         """
-        mess = self.inst.query("LAS:LDV?"+"\n")
+        mess = self.Query("LAS:LDV?"+"\n")
         mess.replace("\n","")
         V = float(mess)
         return V
@@ -48,12 +47,12 @@ class Arroyo4300(object):
     def SetFreq(self, Hz):
         """Set the frequency in pulse mode, keeps pulse width constant, changes duty cycle
         """
-        self.inst.write("LAS:F "+str(Hz)+"\n")
+        self.Write("LAS:F "+str(Hz)+"\n")
     
     def GetFreq(self):
         """Get the frequency in pulse mode
         """
-        mess = self.inst.query("LAS:F?\n")
+        mess = self.Query("LAS:F?\n")
         mess = mess.replace("\n","")
         Hz = float(mess)
         return Hz
@@ -61,17 +60,17 @@ class Arroyo4300(object):
     def SetPulseWidth_ConstF(self,ms):
         """Set the pulse width (ms) but keep frequency constant, changes duty cycle
         """
-        self.inst.write("LAS:PWF "+str(ms)+"\n")
+        self.Write("LAS:PWF "+str(ms)+"\n")
         
     def SetPulseWidth_ConstP(self,ms):
         """Set the pulse width (ms) but keep duty cycle constant, change the frequency
         """
-        self.inst.write("LAS:PWF "+str(ms)+"\n")
+        self.Write("LAS:PWF "+str(ms)+"\n")
         
     def GetPulseWidth(self):
         """Gets the current pulse width (ms)
         """
-        mess = self.inst.query("LAS:PW?"+"\n")
+        mess = self.Query("LAS:PW?"+"\n")
         mess.replace("\n","")
         ms = float(mess)
         return ms
@@ -79,7 +78,7 @@ class Arroyo4300(object):
     def GetDutyCycle(self,perc):
         """Get the current Duty Cycle in %
         """
-        mess  = self.inst.query("LAS:DC?\n")
+        mess  = self.Query("LAS:DC?\n")
         mess.replace("\n","")
         perc = float(mess)
         return perc

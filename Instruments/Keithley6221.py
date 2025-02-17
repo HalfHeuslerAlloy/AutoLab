@@ -7,8 +7,9 @@ Driver for the 6221, Also controls the 2182.
 """
 import re
 from time import sleep
+from Instruments.Instrument_class import Instrument
 
-class Keithley6221(object):
+class Keithley6221(Instrument):
     
     def __init__(self, rm, GPIB_Address):
         """
@@ -25,15 +26,11 @@ class Keithley6221(object):
             NB: 6221-2182 wont work over RS232
 
         """
-        if type(GPIB_Address) != type(" "):
-            self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
-        else:
-            self.VI = rm.open_resource(GPIB_Address)
-        
+        super().__init__(rm, GPIB_Address)
         self.VI.write_termination = self.VI.LF
         self.VI.read_termination = self.VI.LF#set up the read/write terminations
         #LF=/n Works on NIMAX so... no need to change it?
-        self.status=self.VI.query("*STB?")
+        self.status=self.Query("*STB?")
         #set up a reading of the status register and populate it from the start. 
         #TODO: add Handling here for particularly fatal errors.
         
@@ -42,7 +39,7 @@ class Keithley6221(object):
         self.VI.close()
     
     def clear_status(self):
-        self.VI.write("*CLS")
+        self.Write("*CLS")
         
     def get_status(self):
         #get the status byte
@@ -50,7 +47,7 @@ class Keithley6221(object):
     
     def update_status(self):
         #update status byte and return
-        self.status=self.VI.query("*STB?")
+        self.status=self.Query("*STB?")
         return(self.status)
 
 # =============================================================================
@@ -67,11 +64,11 @@ class Keithley6221(object):
             Which wavefunc to use. Sine (SIN),Square (SQU), Ramp(RAMP) 
         """
         if re.search("SIN",Function):
-            self.VI.write("SOUR:WAVE:FUNC SIN")
+            self.Write("SOUR:WAVE:FUNC SIN")
         elif re.search("SQU",Function):
-            self.VI.write("SOUR:WAVE:FUNC SQU")
+            self.Write("SOUR:WAVE:FUNC SQU")
         elif re.search("RAMP",Function):
-            self.VI.write("SOUR:WAVE:FUNC RAMP")
+            self.Write("SOUR:WAVE:FUNC RAMP")
         else:
             raise KeyError("Invalid WaveFunction Sent")
             self.__del__()
@@ -94,12 +91,12 @@ class Keithley6221(object):
         try:
             Duty=int(Duty_Cycle)
             if 0<=Duty<=100:
-                self.VI.write("SOUR:WAVE:DCYC {:d}".format(Duty))
+                self.Write("SOUR:WAVE:DCYC {:d}".format(Duty))
             else:
                 raise ValueError("Invalid Duty Cycle, Saw {:d}".format(Duty))
             return()
         except TypeError:
-            Duty=self.VI.query("SOUR:WAVE:DCYC?")
+            Duty=self.Query("SOUR:WAVE:DCYC?")
             return(Duty)
 
     def WaveFrequency(self,Frequency=None):
@@ -122,12 +119,12 @@ class Keithley6221(object):
         try:
             Freq=float(Frequency)
             if 1E-3<=Freq<=1E5:
-                self.VI.write("SOUR:WAVE:FREQ {}".format(Freq))
+                self.Write("SOUR:WAVE:FREQ {}".format(Freq))
             else:
                 raise ValueError("Invalid 6221 Frequency, Saw {}".format(Freq))
             return()
         except TypeError:
-            Freq=self.VI.query("SOUR:WAVE:FREQ?")
+            Freq=self.Query("SOUR:WAVE:FREQ?")
             return(Freq)
 
     def WaveAmp(self,Amplitude=None):
@@ -150,12 +147,12 @@ class Keithley6221(object):
         try:
             Amp=float(Amplitude)
             if 2E-12<=Amp<=1E-1:
-                self.VI.write("SOUR:WAVE:AMPL {}".format(Amp))
+                self.Write("SOUR:WAVE:AMPL {}".format(Amp))
             else:
                 raise ValueError("Invalid 6221 Amplitude, Saw {}".format(Amp))
             return()
         except TypeError:
-            Amp=self.VI.query("SOUR:WAVE:AMPL?")
+            Amp=self.Query("SOUR:WAVE:AMPL?")
             return(Amp)
     
     def Ref_Phase(self, Phase=None):
@@ -178,12 +175,12 @@ class Keithley6221(object):
         try:
             Ph=float(Phase)
             if 0<=Ph<=360:
-                self.VI.write("SOUR:WAVE:PMAR {}".format(Ph))
+                self.Write("SOUR:WAVE:PMAR {}".format(Ph))
             else:
                 raise ValueError("Invalid 6221 Reference Phase, Saw {}".format(Ph))
             return()
         except TypeError:
-            Ph=self.VI.query("SOUR:WAVE:PMAR?")
+            Ph=self.Query("SOUR:WAVE:PMAR?")
             return(Ph)
     
     def Conf_Ref_Trigger(self, Trigger_Channel=None):
@@ -205,15 +202,15 @@ class Keithley6221(object):
         try:
             Trigger=int(Trigger_Channel)
             if 0<Trigger<=6:
-                self.VI.write("SOUR:WAVE:PMAR:OLIN {:d}".format(Trigger))
-                self.VI.write("SOUR:WAVE:PMAR:STAT ON")
+                self.Write("SOUR:WAVE:PMAR:OLIN {:d}".format(Trigger))
+                self.Write("SOUR:WAVE:PMAR:STAT ON")
             elif Trigger==0:#0 is not a valid channel, but it makes a nice "Off" shorthand
-                self.VI.write("SOUR:WAVE:PMAR:STAT OFF")
+                self.Write("SOUR:WAVE:PMAR:STAT OFF")
             else:
                 raise ValueError("Invalid 6221 Waveform Trigger Channel, Saw {}".format(Trigger))
             return()
         except TypeError:
-            Trigger=self.VI.query("SOUR:WAVE:PMAR:OLIN?")
+            Trigger=self.Query("SOUR:WAVE:PMAR:OLIN?")
             return(Trigger)
         
     def Wave_Offset(self, Offset=None):
@@ -234,12 +231,12 @@ class Keithley6221(object):
         try:
             Off=int(Offset)
             if -0.1<Off<=0.1:
-                self.VI.write("SOUR:WAVE:OFFS {}".format(Off))
+                self.Write("SOUR:WAVE:OFFS {}".format(Off))
             else:
                 raise ValueError("Invalid 6221 Waveform Offset, Saw {}".format(Off))
             return()
         except TypeError:
-            Offs=self.VI.query("SOUR:WAVE:OFFS?")
+            Offs=self.Query("SOUR:WAVE:OFFS?")
             return(Offs)
         
     def Start_Wave(self):
@@ -251,10 +248,10 @@ class Keithley6221(object):
         None.
 
         """
-        self.VI.write("SOUR:WAVE:ARM")
+        self.Write("SOUR:WAVE:ARM")
         sleep(0.1)#Let the Source go through with the arm command. 
         #PROBABLY unnecessary but better than spamming commands at the speed of CPU
-        self.VI.write("SOUR:WAVE:INIT")#starts the wave
+        self.Write("SOUR:WAVE:INIT")#starts the wave
         return()
     
     def Abort_Wave(self):
@@ -266,7 +263,7 @@ class Keithley6221(object):
         None.
 
         """
-        self.VI.write("SOUR:WAVE:ABOR")
+        self.Write("SOUR:WAVE:ABOR")
         return()
 # =============================================================================
 # SWEEP MODE PARAMETERS    
@@ -300,14 +297,14 @@ class Keithley6221(object):
                     return()
             out_current=out_current[1:]#as the first point has that comma, trim.
             message="SOUR:LIST:CURR"+out_current
-            self.VI.write(message)
-            self.VI.write("SOUR:SWE:SPAC LIST")#sets the 6221 to use your defined list.
+            self.Write(message)
+            self.Write("SOUR:SWE:SPAC LIST")#sets the 6221 to use your defined list.
             self.samples=int(len(list_currents))
             #configures the buffer to accept a number of readings equal to the number of current points supplied
             return()
         else:
-            points=self.VI.query("SOUR:LIST:CURR:POIN?")
-            currents=self.VI.query("SOUR:LIST:CURR?")
+            points=self.Query("SOUR:LIST:CURR:POIN?")
+            currents=self.Query("SOUR:LIST:CURR?")
             return(tuple(points,currents))
     
     def set_Range(self, Vrange=None):
@@ -319,8 +316,8 @@ class Keithley6221(object):
             try:
                 float(Vrange)
                 if Vrange < 110:
-                    self.VI.write("SYST:COMM:SER:SEND VOLT:RANG {}".format(abs(Vrange)))
-                    self.VI.write("SYST:COMM:SER:SEND VOLT:RANG:AUTO OFF")
+                    self.Write("SYST:COMM:SER:SEND VOLT:RANG {}".format(abs(Vrange)))
+                    self.Write("SYST:COMM:SER:SEND VOLT:RANG:AUTO OFF")
                     #NO AUTO RANGING. KNOW WHAT YOU'RE MEASURING
                     return()
                 else:
@@ -329,8 +326,8 @@ class Keithley6221(object):
                 raise e
                 return()
         else:
-            self.VI.write("SYST:COMM:SER:SEND VOLT:RANG?")#sends read query
-            return(self.VI.query("syst:comm:ser:ENT?"))#gets the response from the query
+            self.Write("SYST:COMM:SER:SEND VOLT:RANG?")#sends read query
+            return(self.Query("syst:comm:ser:ENT?"))#gets the response from the query
     
     def define_Buffer(self,points=None, Current_Link=True):
         """
@@ -357,10 +354,10 @@ class Keithley6221(object):
                 return()
         else:
             
-            self.VI.write("SYST:COMM:SER:SEND TRAC:CLE")#Clear Buffer
-            self.VI.write("SYST:COMM:SER:SEND TRAC:POIN {}").format(points)#set buffer size
-            self.VI.write("SYST:COMM:SER:SEND TRAC:FEED SENS")
-            self.VI.write("SYST:COMM:SER:SEND TRAC:FEED:CONT NEXT")#now will continuously feed new measurements into the Buffer
+            self.Write("SYST:COMM:SER:SEND TRAC:CLE")#Clear Buffer
+            self.Write("SYST:COMM:SER:SEND TRAC:POIN {}").format(points)#set buffer size
+            self.Write("SYST:COMM:SER:SEND TRAC:FEED SENS")
+            self.Write("SYST:COMM:SER:SEND TRAC:FEED:CONT NEXT")#now will continuously feed new measurements into the Buffer
                 
     
     
@@ -377,19 +374,19 @@ class Keithley6221(object):
         None.
 
         """
-        spacing=self.VI.query("SOUR:SWE:SPAC?")
+        spacing=self.Query("SOUR:SWE:SPAC?")
         if re.search("LIST", spacing) == None:
             raise Exception ("6221 Not set into List-Sweep mode, please use the set_Sweep command first!")
             return()#catch the case where someone tries this immediately after turn-on. 
         #I think all the computation about the values can be handled by the scripts better tbh. 
-        self.VI.write("TRIG:SOUR TLINK")#set the 6221 to Accept a TLINK signal.
-        self.VI.write("SYST:COMM:SER:SEND TRIG:SOUR:EXT")#set the 2182 to accept an external Trigger
-        self.VI.write("SYST:COMM:SER:SEND TRIG:COUN INF")
-        self.VI.write("SYST:COMM:SER:SEND TRIG:DEL:AUTO ON")#Enables AUto-Delay #TODO-allow this to be configured
-        self.VI.write("SYST:COMM:SER:SEND INIT:CONT ON")#Sets the 2182 to be in the Trigger loop, out of the ARM loop.
-        self.VI.write("TRIG:ILINE 1")#Accepts input on line 1
-        self.VI.write("TRIG:OLINE 2")#Outputs a trigger on line 2(This setup is needed for the 2182)
-        self.VI.write("TRIG:DIR SOUR")#Enables the output of a trigger pulse.
+        self.Write("TRIG:SOUR TLINK")#set the 6221 to Accept a TLINK signal.
+        self.Write("SYST:COMM:SER:SEND TRIG:SOUR:EXT")#set the 2182 to accept an external Trigger
+        self.Write("SYST:COMM:SER:SEND TRIG:COUN INF")
+        self.Write("SYST:COMM:SER:SEND TRIG:DEL:AUTO ON")#Enables AUto-Delay #TODO-allow this to be configured
+        self.Write("SYST:COMM:SER:SEND INIT:CONT ON")#Sets the 2182 to be in the Trigger loop, out of the ARM loop.
+        self.Write("TRIG:ILINE 1")#Accepts input on line 1
+        self.Write("TRIG:OLINE 2")#Outputs a trigger on line 2(This setup is needed for the 2182)
+        self.Write("TRIG:DIR SOUR")#Enables the output of a trigger pulse.
         
     
     def start_Sweep(self):
@@ -401,19 +398,19 @@ class Keithley6221(object):
         None.
 
         """
-        self.VI.write("*CLS")#clear the registers. We'll use these to find when the sweep is finished. 
-        self.VI.write("TRAC:CLE")
+        self.Write("*CLS")#clear the registers. We'll use these to find when the sweep is finished. 
+        self.Write("TRAC:CLE")
         sweep_finished=False
-        self.VI.write("INIT:IMM")#START!
+        self.Write("INIT:IMM")#START!
         while sweep_finished==False:
-            status=self.VI.query("STAT:OPER:EVEN?")#query event register
+            status=self.Query("STAT:OPER:EVEN?")#query event register
             print(status)#debug fragment
             if re.search("1066",status) is not None:#1066 is the event for a successful sweep
                 sweep_finished=True
             #TODO: Add flags for other abort events, i.e abort on compliance.
             
-        self.VI.write("SYST:COMM:SER:SEND TRAC:DATA?")
-        return(self.VI.query("SYST:COMM:SER:ENT?"))#should have the output of the sweep.
+        self.Write("SYST:COMM:SER:SEND TRAC:DATA?")
+        return(self.Query("SYST:COMM:SER:ENT?"))#should have the output of the sweep.
         
         
         

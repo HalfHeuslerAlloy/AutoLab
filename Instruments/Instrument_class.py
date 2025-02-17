@@ -10,7 +10,7 @@ Note; This cements self.VI as the syntax for direct write to instruments.
 import inspect
 from pyvisa.constants import StopBits, Parity
 
-class Instrument:
+class Instrument(object):
     
     def __init__(self,rm,channel,GPIB=True, Baud_Rate=9600, Data_Bits=8, Parity=Parity.none, Stop_bits=StopBits.one):
         """
@@ -53,6 +53,9 @@ class Instrument:
                 except ValueError:
                     raise Exception("Invalid COM Address. Expected an Int or a string beginning ASRL, got {}".format(channel))
             
+    def __del__(self):
+        self.VI.close()
+    
     def Write (self,message):
         """
         Write a message to an instrument
@@ -82,7 +85,7 @@ class Instrument:
             finally:
                 del frame #done to prevent memory leaks due to reccurent frame references
                 
-            exception_message="Error occured Writing "+ message + " in "+module_name+":"+exception_arg
+            exception_message="Error occured Writing "+ message + " in "+module_name+": "+exception_arg
             raise Exception(exception_message)
     
     def Query (self, message):
@@ -116,8 +119,34 @@ class Instrument:
             finally:
                 del frame #done to prevent memory leaks due to reccurent frame references
                 
-            exception_message="Error occured Querying "+ message + " in "+module_name+":"+exception_arg
+            exception_message="Error occured Querying "+ message + " in "+module_name+": "+exception_arg
             raise Exception(exception_message)
             
-            
+      
+    def Read(self):
+        """
+        Reads a message from the instrument
+
+        Returns
+        -------
+        The read message
+
+        """
+        try:
+            result=self.VI.read()
+            return(result)
         
+        except Exception as e:
+            exception_arg=e.args[0]
+            #contains the actual exception message. Its the only thing printed in the anaconda prompt otherwise
+            try:
+                frame=inspect.currentframe().f_back
+                #gets the caller of this write function. This should be your instrument module
+                trace=inspect.getframeinfo(frame)
+                module_name=trace.filename
+                #As the instruments are named accordingly, the filename should show up the correct name
+            finally:
+                del frame #done to prevent memory leaks due to reccurent frame references
+                
+            exception_message="Error occured Reading in "+module_name+": "+exception_arg
+            raise Exception(exception_message)

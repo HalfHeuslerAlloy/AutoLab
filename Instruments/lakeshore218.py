@@ -6,11 +6,14 @@ Created on Wed Apr 26 11:14:18 2023
 Driver for the Lakeshore 218 temperature controller.
 TODO: Impliment Curve Import from PC, Relay Configuration and In-situ logging in case of PC failiure. 
 I'm probably NOT going to do that, I dont need to do that for this controller, but here you go. 
+
+self.VI=rm.open_resource(Address,baud_rate=9600,data_bits=7,parity=Parity.odd,stop_bits=StopBits.one)
 """
 import re
 from pyvisa.constants import StopBits, Parity
+from Instruments.Instrument_class import Instrument
 
-class lakeshore218(object):
+class lakeshore218(Instrument):
     def __init__(self, rm, Address):
         """
         Initialise the LS218 Monitor
@@ -23,25 +26,16 @@ class lakeshore218(object):
 
         """
 
-        if Address == type(" "): #If the address is not a string the slice in next line dont work!
-            
-            if Address[:3] == "ASRL":
-                self.VI=rm.open_resource(Address,baud_rate=9600,data_bits=7,parity=Parity.odd,stop_bits=StopBits.one)
-            else:
-                raise Exception("Invalid Lakeshore 218 Address, Expected an Int or String Beginning ASRL, got {}".format(Address))
-        else:
-            try:
-                self.VI=rm.open_resource('COM'+str(Address),baud_rate=9600,data_bits=7,parity=Parity.odd,stop_bits=StopBits.one)
-            except ValueError:
-                raise Exception("Invalid Lakeshore218 Address. Expected an Int or a string beginning ASRL, got {}".format(Address))
+        super().__init__(rm, Address, GPIB=False,Baud_Rate=9600, Data_Bits=7,
+                         Parity=Parity.odd, Stop_bits=StopBits.one)
         self.VI.write_termination = self.VI.LF
         self.VI.read_termination = self.VI.LF        #set up command terminators
         
-        ID_Check=self.VI.query("*IDN?")
+        ID_Check=self.Query("*IDN?")
         list_ID=re.split(",",ID_Check)
         if re.search("MODEL218",list_ID[1]) == None:
             #check that the IDN comes back with the expected IDN respense
-            self.inst.close()
+            self.VI.close()
             raise Exception("Address {} is not a Lakeshore 218!".format(str(Address)))
      
     def __chkFloat(self, s):
@@ -64,19 +58,19 @@ class lakeshore218(object):
         """
         Clears the status byte register and Standard Event Status Register.
         """
-        self.VI.write("QCLS")
+        self.Write("QCLS")
         
     def Op_Com(self):
         """
         Generates an Operation Complete event in the register
         """
-        self.VI.write("QOPC")
+        self.Write("QOPC")
         
     def is_Op_Com(self):
         """
         Queries the presence of an Operation Complete Event
         """
-        return(self.VI.query("QOPC?"))
+        return(self.Query("QOPC?"))
     
     def set_Alarm(self,channel, Enable,Unit=1,HighV=310,LowV=0,Soft_Latch=5,Hard_Latch=False):
         """
@@ -122,7 +116,7 @@ class lakeshore218(object):
             print("Invalid Channal or Unit casting. Must be able to be cast as int")
         
         if channel in range(1,9) and Unit in range(1,5):
-            self.VI.write("ALARM {0}, {1}, {2}, {3}, {4}, {5}, {6}".format(channel,Enable,Unit,HighV,LowV,Soft_Latch,Hard_Latch))
+            self.Write("ALARM {0}, {1}, {2}, {3}, {4}, {5}, {6}".format(channel,Enable,Unit,HighV,LowV,Soft_Latch,Hard_Latch))
         else:
             print("Invalid Channel/Unit in Alarm Settings.")
             
@@ -137,7 +131,7 @@ class lakeshore218(object):
             raise Exception("Channel must be able to be cast as Int")
         
         if channel in range(1,9):
-            String_settings=self.VI.query("ALARM? {}".format(channel))
+            String_settings=self.Query("ALARM? {}".format(channel))
             if String_settings[-2:] == r"\n":
                 String_settings = String_settings[:-2]
             list_settings=re.split(",",String_settings)
@@ -166,7 +160,7 @@ class lakeshore218(object):
             raise Exception("Channel must be able to be cast as Int")
         
         if channel in range(1,9):
-            String_Alarm=self.VI.query("ALARMST? {}".format(channel))
+            String_Alarm=self.Query("ALARMST? {}".format(channel))
             if String_Alarm[-2:] == r"\n":
                 String_Alarm = String_Alarm[:-2]
             list_Alarm=re.split(",",String_Alarm)
@@ -179,7 +173,7 @@ class lakeshore218(object):
         """
         Resets Latched alarms for all inputs.
         """
-        self.VI.write("ALMRST")
+        self.Write("ALMRST")
         
     def get_Time(self):
         """
@@ -187,7 +181,7 @@ class lakeshore218(object):
         Returns a string in the format Month,Day,Year,Hour,Minute,Second
 
         """
-        return(str(self.VI.query("DATETIME?")))
+        return(str(self.Query("DATETIME?")))
     
     def set_Time(self,Month,Day,Year,Hour,Minute,Second):
         """
@@ -223,7 +217,7 @@ class lakeshore218(object):
         except ValueError:
             raise Exception("Invalid Date/Time entered. Values must be strings of numbers, castable as Int")
         
-        self.VI.write("DATETIME "+str(Month)+","+str(Day)+","+str(Year)+","+str(Hour)+","+str(Minute)+","+str(Second))
+        self.Write("DATETIME "+str(Month)+","+str(Day)+","+str(Year)+","+str(Hour)+","+str(Minute)+","+str(Second))
         
     def query_GPIB(self):
         """
@@ -234,7 +228,7 @@ class lakeshore218(object):
         A tuple of length 3. In the order Terminator,EOI,Address. Parameters are as Config_GPIB
 
         """
-        String_GPIB=self.VI.query("IEEE?")
+        String_GPIB=self.Query("IEEE?")
         if String_GPIB[-2:] == r"\n":
             String_GPIB = String_GPIB[:-2]
         list_GPIB=re.split(",",String_GPIB)
@@ -267,7 +261,7 @@ class lakeshore218(object):
         except ValueError:
             raise Exception("Invalid Variable Types detected in GPIB configuration")
             
-        self.VI.write("IEEE "+str(term)+","+str(EOI)+","+str(New_Address))
+        self.Write("IEEE "+str(term)+","+str(EOI)+","+str(New_Address))
         self.close()
         print("Closed Connection to Lakeshore 218 Due to programmed GPIB change")
     
@@ -291,7 +285,7 @@ class lakeshore218(object):
         except ValueError:
             raise Exception("Channel ID could not be cast as Int. Check inputs")
         
-        return(self.__chkFloat(self.VI.query("KRDG? "+str(N))))
+        return(self.__chkFloat(self.Query("KRDG? "+str(N))))
     
             
     def getTempAll(self):
@@ -303,7 +297,7 @@ class lakeshore218(object):
         A tuple of all the read temperatures
 
         """
-        String_Temps=self.VI.query("KRDG? 0")
+        String_Temps=self.Query("KRDG? 0")
         if String_Temps[-2:] == r"\n":
             String_Temps = String_Temps[:-2]
         list_Temps=re.split(",",String_Temps)
@@ -329,7 +323,7 @@ class lakeshore218(object):
         except ValueError:
             raise Exception("Channel ID could not be cast as Int. Check inputs")
         
-        return(self.__chkFloat(self.VI.query("SRDG? "+str(N))))
+        return(self.__chkFloat(self.Query("SRDG? "+str(N))))
     
             
     def getSensAll(self):
@@ -341,7 +335,7 @@ class lakeshore218(object):
         A tuple of all the read resistances
 
         """
-        String_Temps=self.VI.query("SRDG? 0")
+        String_Temps=self.Query("SRDG? 0")
         if String_Temps[-2:] == r"\n":
             String_Temps = String_Temps[:-2]
         list_Temps=re.split(",",String_Temps)
