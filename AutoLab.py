@@ -639,8 +639,6 @@ class Window(tk.Frame):
                     #Should catch any Exception object (Any exception, TypeError, AttrError...)
                     #that is sent down the pipe.
                     #Allows for Error-finding that won't get swamped by other statements on the Terminal.
-                    #TODO: This works, but doesnt allow information to be sent about WHAT caused the exception. 
-                    #Have to think about that because just sending a VISAError is not useful.
                     print("Found an error!")
                     print(Data)
                 else:

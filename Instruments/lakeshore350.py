@@ -20,8 +20,6 @@ class lakeshore350(Instrument):
             self.VI.close()
             raise Exception("Address {} is not a Lakeshore 350!".format(str(channel))) 
     
-    def __del__(self):
-        self.VI.close()
     
     def close(self):
         self.VI.close()
