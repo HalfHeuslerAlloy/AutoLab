@@ -597,7 +597,8 @@ class Window(tk.Frame):
             
             #get data from pipe
             Data = self.PipeRecv.recv()#this should be a short list of data to be plotted/written to file
-            
+            print(Data)
+
             #TODO make flags for drawning to graph
             #TODO unwraping multiple points
             #If data isn't a string append to rawdata list for plotting
@@ -639,14 +640,14 @@ class Window(tk.Frame):
                     #Should catch any Exception object (Any exception, TypeError, AttrError...)
                     #that is sent down the pipe.
                     #Allows for Error-finding that won't get swamped by other statements on the Terminal.
-                    print("Found an error!")
-                    print(Data)
+                    tk.messagebox.showerror("Found an error!",Data.args[0])
+                    #print(Data)
                 else:
                     print(e)
                     print("Received Data that couldnt be iterated over, not sure what you're doing! Aborting.")
                     print(Data)
-                self.MeasureFinished()
-                break
+                    self.MeasureFinished()
+                    break
                 
             
             ##### Save data to save file ####

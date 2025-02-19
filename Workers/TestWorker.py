@@ -136,10 +136,9 @@ class Handler(ttk.Notebook):
 
         
 def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
-    
     #column headers
     Pipe.send(Headers)
- 
+    
     for x in np.linspace(Str,Stp,int(Steps)):
         #steps has to be broadcast as int explicitly for np 1.23.5
         #Check for commands from controller
@@ -160,11 +159,11 @@ def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
 
         time.sleep(Dwl)
     try:
-        Pipe.send(X[4])#nonsense. will throw an error.
+       X[4]#nonsense. will throw an error.
     except Exception as e:
         Pipe.send(e)
-    
-    Pipe.send("Esc")
+    finally:    
+        Pipe.send("Esc")
 
 
 
