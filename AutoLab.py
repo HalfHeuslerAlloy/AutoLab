@@ -597,7 +597,6 @@ class Window(tk.Frame):
             
             #get data from pipe
             Data = self.PipeRecv.recv()#this should be a short list of data to be plotted/written to file
-            print(Data)
 
             #TODO make flags for drawning to graph
             #TODO unwraping multiple points
