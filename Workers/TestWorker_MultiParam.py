@@ -144,9 +144,9 @@ class Handler(ttk.Notebook):
         
 def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
     
-
-    
-    for z in range(0,3):
+    Abort=False
+    z=0
+    while z<3 and Abort==False:
         #column headers, do it once per multi param loop.
         Pipe.send(Headers)
         for x in np.linspace(Str,Stp,int(Steps)):
@@ -155,7 +155,7 @@ def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
             if Pipe.poll():
                 Comm = Pipe.recv()
                 if Comm=="STOP":
-                    break
+                    Abort=True
                 if Comm=="SKIP":
                     print("Skipping")
                     break
@@ -170,7 +170,7 @@ def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
             time.sleep(Dwl)
         print("Finished Loop {}".format(z+1))
         Pipe.send("NewFile")
-    
+        z+=1
     Pipe.send("Esc")
 
 

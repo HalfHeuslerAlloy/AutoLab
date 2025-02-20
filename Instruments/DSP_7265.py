@@ -1,7 +1,8 @@
 import numpy as np
 import re
-
-class DSP_7265(object):
+from Instruments.Instrument_class import Instrument
+root_two=np.sqrt(2)
+class DSP_7265(Instrument):
     def __init__(self,rm, GPIB_Address, RemoteOnly = False):
         """
         Initializes the object as the 7265 Lock-in Amplifier.
@@ -19,17 +20,15 @@ class DSP_7265(object):
         RemoteOnly : bool, optional
             Control remotely (T) or not (F).
         """
-        if type(GPIB_Address) != type(" "):
-            self.VI = rm.open_resource('GPIB0::' + str(GPIB_Address) + '::INSTR')
-        else:
-            self.VI = rm.open_resource(GPIB_Address)
-            
+        super().__init__(rm, GPIB_Address)#open the lockin through the Instrument_class.Instrument init func.
+        
+        
         self.VI.write_termination = self.VI.CR
-        self.VI.read_termination = self.VI.CR
+        self.VI.read_termination = self.VI.CR#these still need to be here, as they 
         #self.VI = visa.instrument('GPIB0::' + str(GPIB_Address))
         self.RemoteOnly(RemoteOnly)
-    def __del__(self):
-        self.VI.close()
+
+
         
     def __chkFloat(self, s):
         if s[-2:] == r"\r":
@@ -39,7 +38,7 @@ class DSP_7265(object):
     def __chkFloatList(self, s):
         if s[-2:] == r"\r":
             s = s[:-2]
-        s = [float(i) for i in s.split(",")]
+        s = np.array([float(i) for i in s.split(",")])#allows multiplication operations as is not a generic sequence?
         return s
         
     def RemoteOnly(self, rO = True):
@@ -52,9 +51,9 @@ class DSP_7265(object):
             Remote Only (T) or not (F).
         """
         if rO:
-            self.VI.write('REMOTE 1')
+            self.Write('REMOTE 1')
         else:
-            self.VI.write('REMOTE 0')
+            self.Write('REMOTE 0')
             
     def setTC(self, TC):
         """ Sets the Filter Time Constant.
@@ -112,16 +111,16 @@ class DSP_7265(object):
                                 100E3])
             TC = str(len(bins[bins <= TC]))
         if TC in map(str, range(30)):
-            self.VI.write('TC ' + TC)
+            self.Write('TC ' + TC)
         else:
             print('EG&G 7265 Lock-In Wrong Time Constant Code')
     def __getTC(self):
-        return float(self.VI.query('TC.'))
+        return float(self.Query('TC.'))
     #TC. reads the time constant in seconds TC (no full stop) reads the corresponding code
     TC = property(__getTC, setTC, None, "Filter Time Constant.")
     
     def getTCons (self):
-        return(self.VI.query('TC'))#gets the code for easier meshing with formatting. 
+        return(self.Query('TC'))#gets the code for easier meshing with formatting. 
     #Basically, if somoene sets a 1Ks TC, writing that as 1000 will be nasty.
     
     def setSEN(self, vSen):
@@ -164,7 +163,7 @@ class DSP_7265(object):
         vSen : float or string
             Float for sensitivity value or string for code.
         """
-        InputMode = self.VI.query('IMODE')
+        InputMode = self.Query('IMODE')
         if type(vSen) != type(' '):
             if InputMode == '0':
                 vSen = vSen * 1.0E-6 
@@ -183,17 +182,17 @@ class DSP_7265(object):
                 vSen = np.clip(vSen, 7, 27)
             vSen = str(vSen)
         if vSen in map(str, range(1,28)):
-            self.VI.write('SEN ' + vSen)
+            self.Write('SEN ' + vSen)
         else:
             print('EG&G 7265 Lock-In Wrong Scale Sensitivity Code')
     def __getSEN(self):
-        return float(self.VI.query('SEN.'))
+        return float(self.Query('SEN.'))
     #SEN. reads the senitivity in the relevant unit, based on the Input mode
     #SEN (no full stop) reads the corresponding code
     SEN = property(__getSEN, setSEN, None, "Full Scale Sensitivity.")
     
     def getSens(self):
-        return(self.VI.query('SEN'))
+        return(self.Query('SEN'))
     #for easier meshing with Lockins across different input modes. 
     
     def FilterSlope(self, sl):
@@ -213,7 +212,7 @@ class DSP_7265(object):
             String for code.
         """
         if sl in ['0', '1', '2', '3']:
-            self.VI.write('SLOPE ' + sl)
+            self.Write('SLOPE ' + sl)
         else:
             print('EG&G 7265 Lock-In Wrong Slope Code')
     
@@ -233,7 +232,7 @@ class DSP_7265(object):
             String for code.
         """
         if imode in ['0', '1', '2']:
-            self.VI.write('IMODE ' + imode)
+            self.Write('IMODE ' + imode)
         else:
             print('EG&G 7265 Lock-In Wrong Input Mode Code')
             
@@ -252,9 +251,9 @@ class DSP_7265(object):
         vmode : string
             String for code.
         """
-        self.VI.write('VMODE 0')
+        self.Write('VMODE 0')
         if vmode in ['0', '1', '2', '3']:
-            self.VI.write('VMODE ' + vmode)
+            self.Write('VMODE ' + vmode)
         else:
             print('EG&G 7265 Lock-In Wrong Voltage Configuration Code')
     
@@ -267,9 +266,9 @@ class DSP_7265(object):
             Enable (T) or disable (F).
         """
         if Sy:
-            self.VI.write('SYNC 1')
+            self.Write('SYNC 1')
         else:
-            self.VI.write('SYNC 0')
+            self.Write('SYNC 0')
             
     def setOscilatorFreq(self, freq):
         """Set the internal Oscilator Frequency.
@@ -280,7 +279,7 @@ class DSP_7265(object):
             Frequency.
         """
         fq = str(int(freq*1E3))
-        self.VI.write('OF '+ fq)
+        self.Write('OF '+ fq)
         
     def setOscilatorAmp(self, amp):
         """Set the internal Oscilator Amplitude.
@@ -291,7 +290,7 @@ class DSP_7265(object):
             Amplitude.
         """
         A = str(int(amp*1E6))
-        self.VI.write('OA '+ A)
+        self.Write('OA '+ A)
         
     def setRefPhase(self, ph):
         """Set the phase reference.
@@ -302,12 +301,12 @@ class DSP_7265(object):
             Phase.
         """
         P = str(int(ph*1E3))
-        self.VI.write('REFP '+ P)
+        self.Write('REFP '+ P)
         
     def getRefPhase(self):
         """Get the programed phase reference."""
         # Strip '\x00' that is returned on 9.1 firmware
-        ref = self.VI.query('REFP.')
+        ref = self.Query('REFP.')
         ref = ref.strip('\x00')
         return self.__chkFloat(ref)
         
@@ -327,31 +326,31 @@ class DSP_7265(object):
             'Auto', by default, or from '0' to '9'.
         """
         if InDev  == 'FET':
-            self.VI.write('FET 1')
+            self.Write('FET 1')
         elif InDev  == 'Bipolar':
-            self.VI.write('FET 0')
+            self.Write('FET 0')
         else:
             print('EG&G 7265 Lock-In Wrong Input device control Code')
 
         if Coupling  == 'DC':
-            self.VI.write('CP 1')
+            self.Write('CP 1')
         elif Coupling  == 'AC':
-            self.VI.write('CP 0')
+            self.Write('CP 0')
         else:
             print('EG&G 7265 Lock-In Wrong Input Coupling Code')
 
         if Ground  == 'GND':
-            self.VI.write('FLOAT 0')
+            self.Write('FLOAT 0')
         elif Ground  == 'Float':
-            self.VI.write('FLOAT 1')
+            self.Write('FLOAT 1')
         else:
             print('EG&G 7265 Lock-In Wrong Input Coupling Code')
             
         if AcGain == 'Auto':
-            self.VI.write('AUTOMATIC 1')
+            self.Write('AUTOMATIC 1')
         elif AcGain in map(str, range(10)):
-            self.VI.write('AUTOMATIC 0')
-            self.VI.write('ACGAIN ' + AcGain)
+            self.Write('AUTOMATIC 0')
+            self.Write('ACGAIN ' + AcGain)
         else:
             print('EG&G 7265 Lock-In Wrong AcGain Code')
     
@@ -361,9 +360,9 @@ class DSP_7265(object):
         if abs(off_to_send) > 300:
             raise ValueError("Offset out of 300% max range")
         elif Enable == True:
-            self.VI.write('XOF 1 '+off_to_send)
+            self.Write('XOF 1 '+off_to_send)
         elif Enable == False:
-            self.VI.write('XOF 0 '+off_to_send)
+            self.Write('XOF 0 '+off_to_send)
     
     def setYoff(self, Offset, Enable):
         """Sets the Offset in % on the Y channel and toggles with Enable"""
@@ -371,9 +370,9 @@ class DSP_7265(object):
         if abs(off_to_send) > 30000:
             raise ValueError("Offset out of 300% max range")
         elif Enable == True:
-            self.VI.write('YOF 1 '+off_to_send)
+            self.Write('YOF 1 '+off_to_send)
         elif Enable == False:
-            self.VI.write('YOF 0 '+off_to_send)
+            self.Write('YOF 0 '+off_to_send)
             
     def getXOff(self):
         """
@@ -384,7 +383,7 @@ class DSP_7265(object):
         n2- the value of the offset in %*100
 
         """
-        string_Off=self.VI.query('XOF')
+        string_Off=self.Query('XOF')
         list_Off=re.split(",",string_Off)
         
         #has to be done beforehand because string comprehension is hard
@@ -399,7 +398,7 @@ class DSP_7265(object):
         n2- the value of the offset in %*100
 
         """
-        string_Off=self.VI.query('YOF')
+        string_Off=self.Query('YOF')
         list_Off=re.split(",",string_Off)
         
         #has to be done beforehand because string comprehension is hard
@@ -424,19 +423,19 @@ class DSP_7265(object):
             raise ValueError("Not a Valid Offset Input")
         else:
             if Toggle==0:
-                self.VI.write('XOF 0')
-                self.VI.write('YOF 0')
+                self.Write('XOF 0')
+                self.Write('YOF 0')
             elif Toggle==1:
-                self.VI.write('XOF 1')
-                self.VI.write('YOF 0')
+                self.Write('XOF 1')
+                self.Write('YOF 0')
                 
             elif Toggle==2:
-                self.VI.write('XOF 0')
-                self.VI.write('YOF 1')
+                self.Write('XOF 0')
+                self.Write('YOF 1')
                 
             elif Toggle==3:
-                self.VI.write('XOF 1')
-                self.VI.write('YOF 1')
+                self.Write('XOF 1')
+                self.Write('YOF 1')
 
    
     def setExp(self, Exp):
@@ -457,10 +456,10 @@ class DSP_7265(object):
         if abs(int(Exp)) > 3:
             raise ValueError("Not a Valid Expand Input")
         else:
-            self.VI.write('EX '+abs(int(Exp)))
+            self.Write('EX '+abs(int(Exp)))
             
     def getExp(self):
-        return(float(self.VI.query('EX')))
+        return(float(self.Query('EX')))
     
     @property
     def clear(self):
@@ -469,24 +468,40 @@ class DSP_7265(object):
     @property
     def X(self):
         """Returns X component of lock-in measure."""
-        return self.__chkFloat(self.VI.query('X.'))
+        return self.__chkFloat(self.Query('X.'))
     @property
     def Y(self):
         """Returns Y component of lock-in measure."""
-        return self.__chkFloat(self.VI.query('Y.'))
+        return self.__chkFloat(self.Query('Y.'))
     @property
     def XY(self):
         """Returns XY component of lock-in measure."""
-        return self.__chkFloatList(self.VI.query('XY.'))
+        return self.__chkFloatList(self.Query('XY.'))
     @property
     def Magnitude(self):
         """Returns Magnitude of lock-in measure."""
-        return self.__chkFloat(self.VI.query('MAG.'))
+        return self.__chkFloat(self.Query('MAG.'))
+    @property
+    def X_PP(self):
+        """Returns peak-peak X component of lock-in measure."""
+        return (self.__chkFloat(self.Query('X.')))*root_two
+    @property
+    def Y_PP(self):
+        """Returns peak-peak Y component of lock-in measure."""
+        return (self.__chkFloat(self.Query('Y.')))*root_two
+    @property
+    def XY_PP(self):
+        """Returns peak-peak XY component of lock-in measure."""
+        return (self.__chkFloatList(self.Query('XY.')))*root_two#most likely to fall over
+    @property
+    def Magnitude_PP(self):
+        """Returns peak-peak Magnitude of lock-in measure."""
+        return (self.__chkFloat(self.Query('MAG.')))*root_two
     @property
     def Phase(self):
         """Returns Phase of lock-in measure."""
-        return self.__chkFloat(self.VI.query('PHA.'))
+        return self.__chkFloat(self.Query('PHA.'))
     @property
     def Freq(self):
         """Returns Frequency of lock-in device."""
-        return self.__chkFloat(self.VI.query('FRQ.'))
+        return self.__chkFloat(self.Query('FRQ.'))

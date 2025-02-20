@@ -10,10 +10,11 @@ ValueErrors when things arent right. Needs testing but it should provide better 
 
 TODO: Impliment the Auto-Modes (Auto Phase, Auto Gain, Auto Offset, Auto Reserve)
 """
-
+from Instruments.Instrument_class import Instrument
 import numpy as np 
+root_two=np.sqrt(2)
 
-class SR830 (object):
+class SR830 (Instrument):
     def __init__(self,rm,Comm_Address):
         """
         Initialises the object as a Stanford SR830 Lockin
@@ -30,15 +31,12 @@ class SR830 (object):
             if int,its assumed to be a GPIB add
 
         """
-        if type(Comm_Address) != type(" "):
-            self.VI = rm.open_resource('GPIB0::' + str(Comm_Address) + '::INSTR')
-        else:
-            self.VI = rm.open_resource(Comm_Address)
+        super().__init__(rm, Comm_Address)
         self.VI.write_termination = self.VI.LF
         self.VI.read_termination = self.VI.LF 
         #linefeed termination required for GPIB, and also works with RS232 comms
-        self.VI.write("OUTX 1")#sets the output mode to GPIB
-        self.VI.write("OVRM 1")#Prevents the Local Lockout of the Lockin
+        self.Write("OUTX 1")#sets the output mode to GPIB
+        self.Write("OVRM 1")#Prevents the Local Lockout of the Lockin
         
         
     def __del__(self):
@@ -59,7 +57,7 @@ class SR830 (object):
         """
         if s[-2:] == r"\n":
             s = s[:-2]
-        s = [float(i) for i in s.split(",")]
+        s = np.array([float(i) for i in s.split(",")])
         return s
     
     def setTC(self, TC):
@@ -94,7 +92,7 @@ class SR830 (object):
         """
         int_check=int(TC)
         if int_check in range(0,20):
-            self.VI.write("OFLT"+TC)
+            self.Write("OFLT"+TC)
         else:
             raise ValueError("Invalid SR830 Time Constant, Expected a String containing an int between 0 and 19, got {}".format(TC))
             
@@ -105,7 +103,7 @@ class SR830 (object):
         The Value of the SR830 Time contstant as a string representing the index of the array in setTC.
 
         """
-        return(self.VI.query('OFLT?'))
+        return(self.Query('OFLT?'))
     
     def setSEN(self, vSen):
         """
@@ -148,12 +146,12 @@ class SR830 (object):
         """
         int_check=int(vSen)
         if int_check in range(0,27):
-            self.VI.write("SENS"+vSen)
+            self.Write("SENS"+vSen)
         else:
             raise ValueError("Invalid SR830 Sensitivity, Expected a String containing an int between 0 and 26, got {}".format(vSen))
             
     def getSens(self):
-        return(self.VI.query('SENS?'))
+        return(self.Query('SENS?'))
         #for easier meshing with Lockins across different input modes. 
     
     def setReserve(self, Res):
@@ -170,12 +168,12 @@ class SR830 (object):
 
         """
         if Res in ['0','1','2']:
-            self.VI.write("RMOD"+Res)
+            self.Write("RMOD"+Res)
         else:
             raise ValueError("Invalid Reserve Value")
         
     def getReserve(self):
-        return(self.VI.query("RMOD?"))
+        return(self.Query("RMOD?"))
     
     def FilterSlope(self, sl):
         """Set the output filter slope.
@@ -194,12 +192,12 @@ class SR830 (object):
             String for code.
         """
         if sl in ['0', '1', '2', '3']:
-            self.VI.write('OFSL' + sl)
+            self.Write('OFSL' + sl)
         else:
             raise ValueError('SR830 Lock-In Wrong Slope Code')
         
     def getFilterSlope(self):
-        return(self.VI.query('OFSL?'))
+        return(self.Query('OFSL?'))
     
     def isInternalRef(self, ref=False):
         """
@@ -213,9 +211,9 @@ class SR830 (object):
             The default is False.
         """
         if ref==False:
-            self.VI.write("FMOD0")
+            self.Write("FMOD0")
         elif ref==True:
-            self.VI.write("FMOD1")
+            self.Write("FMOD1")
         else:
             raise ValueError("Invalid Reference Mode Input. Expected Bool got {}".format(ref))
     
@@ -228,11 +226,11 @@ class SR830 (object):
             Phase.
         """
         P = str(ph)
-        self.VI.write('PHAS'+ P)
+        self.Write('PHAS'+ P)
         
     def getRefPhase(self):
         """Get the programed phase reference."""
-        return self.__chkFloat(self.VI.query('PHAS?'))
+        return self.__chkFloat(self.Query('PHAS?'))
     
     def setOscilatorAmp(self, amp):
         """Set the internal Oscilator Amplitude.
@@ -244,12 +242,12 @@ class SR830 (object):
         """
         A = str(int(amp))
         if 0.004 <= amp <= 5.0 :
-            self.VI.write('SLVL'+ A)
+            self.Write('SLVL'+ A)
         else:
             raise ValueError("Invalid SR830 Oscillator Amplitude. Expected a number between 0.004 and 5, got {}".format(amp))
     
     def getOscillatorAmp(self):
-        return self.__chkFloat(self.VI.query("SLVL?"))
+        return self.__chkFloat(self.Query("SLVL?"))
     
     def setInternalFreq(self, Freq):
         """
@@ -262,7 +260,7 @@ class SR830 (object):
 
         """
         if 0.001 <= float(Freq) <= 102000:#in case some clown doesnt sanitise their utility inputs. 
-            self.VI.write("FREQ"+str(Freq))
+            self.Write("FREQ"+str(Freq))
         else:
             raise ValueError("Invalid SR830 Oscillator Frequency. Expected a number between 0.001 and 102000, got {}".format(Freq))
 
@@ -304,13 +302,13 @@ class SR830 (object):
                 Edge=0
             else:
                 raise ValueError("Invalid Edge Trigger String")
-            self.VI.write("RSLP"+str(Edge))
+            self.Write("RSLP"+str(Edge))
         else:
             raise ValueError("Invalid Internal/External Reference Status. Expected a Bool, got {}".format(Internal))
             
         self.setRefPhase(Phase)
         if 1 <= Harmonic <=19999:
-            self.VI.write("HARM"+str(Harmonic))
+            self.Write("HARM"+str(Harmonic))
         else:
             raise ValueError("Invalid Harmonic. You're Crazy!")
             
@@ -343,32 +341,32 @@ class SR830 (object):
             passthrough to setReserve. The default is 2.
         """
         if int(Input_Mode) in range (0,4):
-            self.VI.write("ISRC"+str(Input_Mode))
+            self.Write("ISRC"+str(Input_Mode))
         else:
             raise ValueError("Invalid Input Signal Status. Expected an int between 0 and 3, got {}".format(Input_Mode))
         if Shield_Grounded==False:
-            self.VI.write("IGND0")
+            self.Write("IGND0")
         elif Shield_Grounded==True:
-            self.VI.write("IGND1")
+            self.Write("IGND1")
         else:
             raise ValueError("Invalid Shield grounded Status. Expected a Bool, got {}".format(Shield_Grounded))
         
         if Coupling  == "DC":
-            self.VI.write('ICPL1')
+            self.Write('ICPL1')
         elif Coupling  == 'AC':
-            self.VI.write('ICPL0')
+            self.Write('ICPL0')
         else:
             raise ValueError("Invalid Coupling Status. Expected \"AC\" or \"DC\", got {}".format(Coupling))
         
         if int(Notch_Filters) in range (0,4):#requires casting as int incase a float or string gets in.
-            self.VI.write("ILIN"+str(Notch_Filters))
+            self.Write("ILIN"+str(Notch_Filters))
         else:
             raise ValueError("Invalid Notch Filter Status. Expected a number between 0 and 3, got {}".format(Notch_Filters))
             
         if Sync==False:
-            self.VI.write("SYNC0")
+            self.Write("SYNC0")
         elif Sync==True:
-            self.VI.write("SYNC1")
+            self.Write("SYNC1")
         else:
             raise ValueError("Invalid sync Filter Status. Expected a Bool, got {}".format(Sync))
             
@@ -392,7 +390,7 @@ class SR830 (object):
 
         """
         if -105.0 <= Offset <= 105.0 and int(Expand) in range (0,3):
-            self.VI.write("OEXP1,"+str(Offset)+","+str(Expand))
+            self.Write("OEXP1,"+str(Offset)+","+str(Expand))
         else:
             raise ValueError("Invalid X Offset and Expand Status")
     
@@ -413,7 +411,7 @@ class SR830 (object):
 
         """
         if -105.0 <= Offset <= 105.0 and int(Expand) in range (0,3):
-            self.VI.write("OEXP2,"+str(Offset)+","+str(Expand))
+            self.Write("OEXP2,"+str(Offset)+","+str(Expand))
         else:
             raise ValueError("Invalid Y Offset and Expand Status")
             
@@ -427,7 +425,7 @@ class SR830 (object):
             Element 0 will be the offset in %. Element 1 will be the status of the expand, as in setX_OffExp
 
         """
-        return self.__chkFloatList(self.VI.query('OEXP?1'))
+        return self.__chkFloatList(self.Query('OEXP?1'))
     
     def getY_OffExp(self):
         """
@@ -439,7 +437,7 @@ class SR830 (object):
             Element 0 will be the offset in %. Element 1 will be the status of the expand, as in setX_OffExp
 
         """
-        return self.__chkFloatList(self.VI.query('OEXP?2'))
+        return self.__chkFloatList(self.Query('OEXP?2'))
         
     @property
     def clear(self):
@@ -448,24 +446,40 @@ class SR830 (object):
     @property
     def X(self):
         """Returns X component of lock-in measure."""
-        return self.__chkFloat(self.VI.query('OUTP?1'))
+        return self.__chkFloat(self.Query('OUTP?1'))
     @property
     def Y(self):
         """Returns Y component of lock-in measure."""
-        return self.__chkFloat(self.VI.query('OUTP?2'))
+        return self.__chkFloat(self.Query('OUTP?2'))
     @property
     def XY(self):
         """Returns XY component of lock-in measure."""
-        return self.__chkFloatList(self.VI.query('SNAP?1,2'))
+        return self.__chkFloatList(self.Query('SNAP?1,2'))
     @property
     def Magnitude(self):
         """Returns Magnitude of lock-in measure."""
-        return self.__chkFloat(self.VI.query('OUTP?3'))
+        return self.__chkFloat(self.Query('OUTP?3'))
+    @property
+    def X_PP(self):
+        """Returns peak-peak X component of lock-in measure."""
+        return (self.__chkFloat(self.Query('OUTP?1')))*root_two
+    @property
+    def Y_PP(self):
+        """Returns peak-peak Y component of lock-in measure."""
+        return (self.__chkFloat(self.Query('OUTP?2')))*root_two
+    @property
+    def XY_PP(self):
+        """Returns peak-peak XY component of lock-in measure."""
+        return (self.__chkFloatList(self.Query('SNAP?1,2')))*root_two#most likely to fall over
+    @property
+    def Magnitude_PP(self):
+        """Returns peak-peak Magnitude of lock-in measure."""
+        return (self.__chkFloat(self.Query('OUTP?3')))*root_two
     @property
     def Phase(self):
         """Returns Phase of lock-in measure."""
-        return self.__chkFloat(self.VI.query('PHAS?'))
+        return self.__chkFloat(self.Query('PHAS?'))
     @property
     def Freq(self):
         """Returns Frequency of lock-in device."""
-        return self.__chkFloat(self.VI.query('FREQ?'))
+        return self.__chkFloat(self.Query('FREQ?'))

@@ -6,52 +6,53 @@ Created on Fri May 13 10:54:26 2022
 """
 
 from time import sleep
+from Instruments.Instrument_class import Instrument
 
-class IPS120(object):
+class IPS120(Instrument):
     
     def __init__(self, rm, channel):
+        super().__init__(rm,channel)
         
-        self.inst = rm.open_resource('GPIB0::'+str(channel)+'::INSTR')
         #Setup termination characters
-        self.inst.write_termination = "\r"
-        self.inst.read_termination = "\r"
+        self.VI.write_termination = "\r"
+        self.VI.read_termination = "\r"
         
         try:
-            self.inst.clear()
-            self.inst.clear()
+            self.VI.clear()
+            self.VI.clear()
             #Set to remote and unlocked
-            self.inst.write("C3")
+            self.Write("C3")
             sleep(0.1)
             #Set to extend high precesion return values
-            self.inst.write("Q4")
+            self.Write("Q4")
             sleep(0.1)
             #Set display to tesla
-            self.inst.write("M1")
+            self.Write("M1")
             sleep(0.1)
         except:
             print("Failed comms and setup")
         
-        self.inst.clear()
+        self.VI.clear()
         
     
     def __del__(self):
         try:
-            self.inst.close()
+            self.VI.close()
         except Exception as e:
             print(e)
             print("Failed to close, or never connected")
     
     def ExamineStatus(self):
         #Get Statues of machine
-        self.inst.clear()
+        self.VI.clear()
         
         for Try in range(5):
             #5 attempts to read the status of the instrument
-            self.inst.clear()
+            self.VI.clear()
             
             sleep(0.1)
             
-            statusMessage = self.inst.query("X")
+            statusMessage = self.Query("X")
             
             if len(statusMessage)==15:
                 break
@@ -106,17 +107,17 @@ class IPS120(object):
     
     
     def SwitchHeaterOff(self):
-        self.inst.write("H0")
+        self.Write("H0")
     
     def SwitchHeaterOn(self):
-        self.inst.write("H2")
+        self.Write("H2")
     
     
     def get_SweepRate(self):
         """Returns the field sweep rate
         """
         try:
-            rate = self.inst.query("R 9")
+            rate = self.Query("R 9")
             rate = float(rate)
         except:
             rate = None
@@ -126,7 +127,7 @@ class IPS120(object):
         """Returns the set point
         """
         try:
-            setB = self.inst.query("R 8")
+            setB = self.Query("R 8")
             setB = float(setB[1:])
         except Exception as e:
             print(e)
@@ -138,7 +139,7 @@ class IPS120(object):
         """Returns the current sweep rate
         """
         try:
-            B = self.inst.query("R 7")
+            B = self.Query("R 7")
             B = float(B[1:])
         except Exception as e:
             print(e)
@@ -148,23 +149,23 @@ class IPS120(object):
     
     
     def set_SetPoint(self,B):
-        self.inst.write("J{:.5f}".format(B))
+        self.Write("J{:.5f}".format(B))
         
     def set_FieldRate(self,Rate):
         """Sets the ramp rate of the magnet in Tesla/Min
         """
-        self.inst.write("T{:.5f}".format(Rate))
+        self.Write("T{:.5f}".format(Rate))
     
     
     #set the activity of the IPS
     def sweep_Hold(self):
-        self.inst.write("A0")
+        self.Write("A0")
         
     def sweep_SetPoint(self):
-        self.inst.write("A1")
+        self.Write("A1")
         
     def sweep_ToZero(self):
-        self.inst.write("A2")
+        self.Write("A2")
     
     def sweep_Clamp(self):
-        self.inst.write("A4")
+        self.Write("A4")

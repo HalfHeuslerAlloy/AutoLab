@@ -597,17 +597,20 @@ class Window(tk.Frame):
             
             #get data from pipe
             Data = self.PipeRecv.recv()#this should be a short list of data to be plotted/written to file
-            
+            print(Data)
+
             #TODO make flags for drawning to graph
             #TODO unwraping multiple points
             #If data isn't a string append to rawdata list for plotting
-            try:#
+            try:
                 types=[type(ob) for ob in Data]
+
                 if str not in types:
                     self.Data.append(Data)
                     #This is the Data to be PLotted On-Screen, not what is saved to the save-file
                     
                 # TODO add more key work commands, NewFile, ClearGraph,
+
                 elif Data=="Esc":
                     self.MeasureFinished()
                     break
@@ -631,12 +634,20 @@ class Window(tk.Frame):
             except TypeError as e:
                 #if Data is a single int/float, the types generator wont work. 
                 #because strings are lists of string characters, strings work fine.
-                #Not sure WHY you'd use a single data point, but Handle it and abort to prevent indexing problems w. graph
-                print(e)
-                print("Received Data that couldnt be iterated over, not sure what you're doing! Aborting.")
-                print(Data)
-                self.MeasureFinished()
-                break
+                #But Exceptions are not indexable. If the Handler throws an exception we can catch it here to MakeToast
+                
+                if isinstance(Data,Exception):
+                    #Should catch any Exception object (Any exception, TypeError, AttrError...)
+                    #that is sent down the pipe.
+                    #Allows for Error-finding that won't get swamped by other statements on the Terminal.
+                    tk.messagebox.showerror("Found an error!",Data.args[0])
+                    #print(Data)
+                else:
+                    print(e)
+                    print("Received Data that couldnt be iterated over, not sure what you're doing! Aborting.")
+                    print(Data)
+                    self.MeasureFinished()
+                    break
                 
             
             ##### Save data to save file ####

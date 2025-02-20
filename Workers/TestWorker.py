@@ -51,12 +51,13 @@ class Handler(ttk.Notebook):
         """
         Initial setup of GUI widgets and the general window position
         """
-        
+
         StartEntryLabel = tk.Label(self.MainFrame,text="Start")
         StartEntryLabel.pack()
         self.StartEntry = tk.Entry(self.MainFrame,width = 10)
         self.StartEntry.insert(tk.END,"0")
         self.StartEntry.pack()
+
         
         StopEntryLabel = tk.Label(self.MainFrame,text="Stop")
         StopEntryLabel.pack()
@@ -78,8 +79,17 @@ class Handler(ttk.Notebook):
         
         self.SkipButton = tk.Button(self.MainFrame,text="Skip",command=self.Skip)
         self.SkipButton.pack()
-
         
+        data=[np.linspace(0,10,10),np.sin(np.linspace(0,10,10))]
+        self.preveiw=Utility.Preview_plot(self.MainFrame,data)
+        self.preveiw.TK_widget.pack(side="right")
+        
+        self.TestDict={
+            "a":172,
+            "b":2188,
+            "this its the third element":"aaaaaaaaaaaaaaaaaaaaaaaa"}
+
+
     def Start(self,Pipe):
         
         Str  = float(self.StartEntry.get())
@@ -122,13 +132,13 @@ class Handler(ttk.Notebook):
             return False
        
         return True
+    
 
         
 def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
-    
     #column headers
     Pipe.send(Headers)
- 
+    
     for x in np.linspace(Str,Stp,int(Steps)):
         #steps has to be broadcast as int explicitly for np 1.23.5
         #Check for commands from controller
@@ -148,8 +158,12 @@ def Worker(Pipe,Headers,Str,Stp,Steps,Dwl):
         Pipe.send([X,Y1,Y2])
 
         time.sleep(Dwl)
-    
-    Pipe.send("Esc")
+    try:
+       X[4]#nonsense. will throw an error.
+    except Exception as e:
+        Pipe.send(e)
+    finally:    
+        Pipe.send("Esc")
 
 
 

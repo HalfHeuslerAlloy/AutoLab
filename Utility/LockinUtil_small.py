@@ -46,8 +46,8 @@ class Util(tk.Frame):
         LockinTabFrame = tk.Frame(master)
         master.add(LockinTabFrame,text=title)
         ###LOCKIN NAME GUI ELEMENT###
-        self.NameEntry = tk.Entry(LockinTabFrame,width = 10)
-        self.NameEntry.insert(tk.END,"Lockin ID")
+        self.Name=tk.StringVar(LockinTabFrame,"Lockin ID")
+        self.NameEntry = tk.Entry(LockinTabFrame,textvariable=self.Name, width = 10)
         self.NameEntry.grid(column=0, row=0)
         ###COMMS GUI Element###
         #want this populated with valid VISA adresses but dont want a dangling resource manager,
@@ -111,6 +111,7 @@ class Util(tk.Frame):
         #Currently in the order Sensitivity,TC,XOffset,YOffset,EnableOffset/Expand.
         #Feel Free to add more, but the list (and try/except statements) will need expanding.
         #T=no need to update F=Parameter Needs Updating.
+        #Edit 10.24 Why did I separate this into two halves?
         try:
             sens_to_send=(self.Sensvalues.index(self.Sensitivity.get()))+1 
             #for some reason, starts at 1, not 0
@@ -215,6 +216,8 @@ class Util(tk.Frame):
         Lockin_Manager=Inst.DSP_7265(rm,address)
         #create Metadata Dictionary
         Metadata={}
+        Metadata["Instrument"]="Lockin"
+        #because unlike other instruments the "Name" is user-defined, want something to Call out that this is a Lockin
         Metadata["Name"]=self.NameEntry.get()
         Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens())-1]
         Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]

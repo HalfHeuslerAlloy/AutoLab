@@ -134,7 +134,7 @@ class Util(tk.Frame):
     def Disconnect(self):
         
         try:
-            self.Mag.inst.close()
+            self.Mag.__del__()
             self.ConnStatusLabel["text"] = "Disconnect"
             self.ConnStatusLabel["bg"] = "red"
             print("Closed connection to IPS-120 magnet power supply")
@@ -148,7 +148,7 @@ class Util(tk.Frame):
             time.sleep(0.1)
             B = self.Mag.B
             time.sleep(0.1)
-            self.Mag.inst.clear()
+            self.Mag.VI.clear()
             setB = self.Mag.MID
             
             
