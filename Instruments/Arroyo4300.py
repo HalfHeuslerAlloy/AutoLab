@@ -75,7 +75,7 @@ class Arroyo4300(Instrument):
         ms = float(mess)
         return ms
     
-    def GetDutyCycle(self,perc):
+    def GetDutyCycle(self):
         """Get the current Duty Cycle in %
         """
         mess  = self.Query("LAS:DC?\n")
