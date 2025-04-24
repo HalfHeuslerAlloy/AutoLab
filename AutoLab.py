@@ -641,6 +641,7 @@ class Window(tk.Frame):
                     #Allows for Error-finding that won't get swamped by other statements on the Terminal.
                     tk.messagebox.showerror("Found an error!",Data.args[0])
                     #print(Data)
+                    self.MeasureFinished()
                 else:
                     print(e)
                     print("Received Data that couldnt be iterated over, not sure what you're doing! Aborting.")
