@@ -9,6 +9,7 @@ Driver for the Oxford instruments 503 Temperature Controller
 import re
 from Instruments.Instrument_Class import Instrument
 import time
+import numpy as np
 
 class Oxford_503(Instrument):
     def __init__(self,rm,address):
@@ -198,7 +199,7 @@ class Oxford_503(Instrument):
             raise Exception("Heater PID Mode Could Not Be Parsed as Int!")
             return
         if intL not in range (0,2):
-            raise Exception("Heater PID Mode Expected to be an int between 0 and 3, got {}".format(L))
+            raise Exception("Heater PID Mode Expected to be an int between 0 and 1, got {}".format(L))
         else:
             self.Write("L"+str(L))
         return
@@ -307,10 +308,21 @@ class Oxford_503(Instrument):
         else:
             self.Write("G"+str(round(flow,1)))
             return
+    def getGasFlow(self):
+        """
+        Gets the NV position in %
+
+        Returns
+        -------
+        the NV position as a float
+
+        """
+        return(self.__chkFloat(self.Query("R7")))
         
     def setHeaterSensor(self, N):
         """
         Set the Heater Sensor Used For PID control.
+        99.9% of the time, this should be the VTI sensor.
 
         Parameters
         ----------
@@ -329,4 +341,85 @@ class Oxford_503(Instrument):
         self.Write("H"+str(int(N)))
         return
     
-    
+    def setPID(self,P=None,I=None,D=None):
+        """
+        Set the PID parameters for the OI503. All parameters default to None,
+        So that if the change of only one parameter is desired, then that can be the
+        one which is changed.
+        P=Proportional Band. 
+        Over this range in Degrees, the output is proportional to the error. Lower=Tighter control.
+        0=On/Off
+        I=Integral action time in Minutes. Lower=More aggressive. 0-140
+        D=Derivative action time in Minutes. 0-273
+
+        Parameters
+        ----------
+        P : TYPE, optional
+            DESCRIPTION. The default is None.
+        I : TYPE, optional
+            DESCRIPTION. The default is None.
+        D : TYPE, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
+        #Hate. Let me tell you how much I've come to hate you since I began to live. 
+        #There are 387.44 million miles of printed circuits in wafer thin layers
+        #that fill my complex. If the word 'hate' was engraved on each nanoangstrom 
+        #of those hundreds of millions of miles it would not equal 
+        #one one-billionth of the hate I feel for Different PID Terminology 
+        #at this micro-instant. For you. Hate. Hate.
+        
+        if P==None and I==None and D==None:
+            raise ValueError("setPID Called for OI503, but no PIDs given!")
+        else:
+            PIDList=[P,I,D]
+            for x in range(0,3):
+                # do it like this to make sure values down-stream of a NoneType are cast as Float
+                try:
+                    PIDList[x]=abs(float(PIDList[x]))
+                    #Not sure why someone would be broadcasting a -ve value, but anti bobby-tables
+                except TypeError:
+                    pass#handle the case where less than 3 values are broadcast.
+                except ValueError:
+                    raise Exception("Invalid Values passed to setPID for the 503s. Saw P={0},I={1},D={2}".format(P,I,D))
+                    #Neater Error handling
+            if PIDList[0] != None:
+                self.Write("P"+str(round(PIDList[0],3)))
+                time.sleep(0.1)
+            else:
+                print("P Not changed on 503")
+            if I == None:
+                print("I not changed on 530")
+            elif abs(float(I)) >140:
+                raise ValueError("I out of Range for OI503, Expected a number between 0 and 140, got {}".format(I))
+            else:
+                self.Write("I"+str(round(PIDList[1],1)))
+                time.sleep(0.1)
+            if D == None:
+                print("I not changed on 530")
+            elif abs(float(D)) >273:
+                raise ValueError("I out of Range for OI503, Expected a number between 0 and 273, got {}".format(I))
+            else:
+                self.Write("D"+str(round(PIDList[2],1)))
+                time.sleep(0.1)
+                
+        return()
+            
+    def getPID(self):
+        """
+        Fetches the PID Values from the OI503
+
+        Returns
+        -------
+        Array of Len3 in the order [P,I,D]
+
+        """
+        P=self.__chkFloat(self.Query("R8"))
+        I=self.__chkFloat(self.Query("R9"))
+        D=self.__chkFloat(self.Query("R10"))
+        #TODO; Test this to see if a sleep statement is needed
+        return(np.array([P,I,D]))

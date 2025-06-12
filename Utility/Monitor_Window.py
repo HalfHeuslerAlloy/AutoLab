@@ -5,6 +5,12 @@ Created on Thu Jun  1 17:35:23 2023
 @author: eencsk
 Class to manage the Temperature Monitoring Window. 
 Developed for the green cryostat but should be adaptable
+
+TASKS:
+    See if Temperature Control can Monitor an OI503 (Will test isMonitoring==True at same time)
+    See if We can disconnect and Reconnect to an Instrument
+    See if we can Populate the GUI elements w. the "Read" Button.
+
 TODO:(In order of Importance) 
 Make Reconnecting to the Controllers POssible if Incorrect adresses supplied
 Stability Criteria for Measurements as a Fn of Temperature
@@ -32,6 +38,11 @@ import re
 import datetime
 import csv
 from os import path, mkdir
+#scripts to handle the temperature controllers themselves. 
+from .Temperature_Controllers import*
+#Previously just "Controller". Needed as different controllers return things differently.
+#NB: COMMAND SYNTAX MUST BE THE SAME
+
 
 class Mon_Win(tk.Frame):
     """
@@ -39,8 +50,8 @@ class Mon_Win(tk.Frame):
     """
     Mode_Select=[ "Zone","Open Loop", "Manual PID"]
     SensorInput=["A","B","C","D"]
-    TC_Model=["Lakeshore 350"]#Temperature controller Models
-    TM_Model=["Lakeshore 218", "Lakeshore 350"]#temperature Monitor models
+    TC_Model=["Lakeshore_350","OI_503"]#Temperature controller Models
+    TM_Model=["Lakeshore_218", "Lakeshore_350"]#temperature Monitor models
     Heater_Range=["Off","5/2.5 mW","50/25 mW","500/250 mW","5/2.5 W","50/25 W"]#Delete as appropraite when you know the power
     Temperature_Keys=["VTI","Sample","1st Stage","2nd Stage","Magnet 1", "Magnet 2","Helium Pot","Switch Heater"]
     Time_Data=[]
@@ -69,8 +80,9 @@ class Mon_Win(tk.Frame):
             rm.close()
         #if addresses are supplied through the script which calls this util, we dont need to poll all instruments
         #speeds up loading the util
-        self.Model=tk.StringVar(Control_Frame,"Lakeshore 350")
+        self.Model=tk.StringVar(Control_Frame,"Lakeshore_350")
         self.ModelEntry=tk.OptionMenu(Control_Frame, self.Model, *self.TC_Model)
+        self.Model.trace_add("write", self.ChangeModel)
         #future-proofing if we want to apply this to, say, HgITCs
         #For now, rely on having the temperature polling being written with the same syntax
         self.ModelEntry.grid(row=0,column=0)
@@ -89,7 +101,7 @@ class Mon_Win(tk.Frame):
         self.range_Entry=tk.OptionMenu(Control_Frame,self.Range_var,*self.Heater_Range)
         self.range_Entry.grid(column=2,row=0)
 # =============================================================================
-#         HEATER CONTROL WIGETS
+#         HEATER CONTROL WIDGETS
 # =============================================================================
         self.setpoint_entry=tk.Entry(Control_Frame)
         self.setpoint_entry.insert(tk.END,"Enter Setpoint")
@@ -122,8 +134,15 @@ class Mon_Win(tk.Frame):
         self.D_entry.grid(column=3, row=1)
         self.P_entry.grid_remove()
         self.I_entry.grid_remove()
-        self.D_entry.grid_remove()       
+        self.D_entry.grid_remove()  
         
+        #setup Gas Supply bar, Hidden By Default
+        self.Gas_Label=tk.Label(Control_Frame,text="Gas Flow")
+        self.Gas_Label.grid(column=0,row=2)
+        self.Gas_Label.grid_remove()
+        self.Gas_Entry=tk.Scale(Control_Frame, from_=0, to=100, length=300, orient="horizontal",tickinterval=10)
+        self.Gas_Entry.grid(column=1,row=2,columnspan=3)
+        self.Gas_Entry.grid_remove()
         
         self.setpoint_Button = tk.Button(Control_Frame,
                                          text="Activate",
@@ -132,6 +151,13 @@ class Mon_Win(tk.Frame):
         self.setpoint_Button.grid(column = 5, row =1)
         #Default is Zone, but the function to switch modes should have a 
         #Method to change the command to the Appropriate mode
+        
+        self.read_button=tk.Button(Control_Frame, text="Read Controller",
+                                   command=self.Read_Controller_Zone)
+        self.read_button.grid(column = 5, row=0)
+        #Button to read the controller and populate the GUI accordingly.
+        #like the activate button,Defaults to Zone mode, but ChamgeMode should swap to a relevant 
+        #Mode.
         
         self.Off_Button=tk.Button(Control_Frame,
                                          text = "All Off",
@@ -224,6 +250,15 @@ class Mon_Win(tk.Frame):
         try:
             self.Open_Pipes(default_addresses[0],TMon_Address=(default_addresses[1]))
             self.IsMonitoring=True
+            print("PIPE CONTENTS:")
+            print(self.Temp_PipeRecv.recv())
+        except AttributeError:
+            #if the program does not configure correctly, the generated Lakeshore object
+            #will have no VI attribute to open or close. Catch this.
+            print("Connection Error Detected!")
+            self.StartButton.configure(command=self.Reconnect,text="Reconnect",bg="red")
+            #change the start button to now attempt recconnection.
+
         except Exception as e:
             print(e)
             
@@ -238,7 +273,14 @@ class Mon_Win(tk.Frame):
      
         """
         self.Temp_PipeRecv, self.Temp_PipeSend = Pipe(duplex=True)
-        self.Control=Process(target=(Controller),args=(self.Temp_PipeSend,TCon_Address,self.Com.get() ,TMon_Address))
+        Controller=self.Model.get()
+        if Controller == "Lakeshore_350":
+            self.Control=Process(target=(Lakeshore_350_Controller),args=(self.Temp_PipeSend,TCon_Address,self.Com.get() ,TMon_Address))
+        elif Controller == "OI_503" :
+            self.Control=Process(target=(OI_503_Controller),args=(self.Temp_PipeSend,TCon_Address,self.Com.get()))
+        else:
+            raise Exception("Unknown Temperature Controller Model!")
+            
         self.Control.start()
 
         self.Temp_PipeRecv.send("T; G")
@@ -278,6 +320,24 @@ class Mon_Win(tk.Frame):
         self.Current_Log.close()
         self.IsMonitoring=False#use this to close anything that isnt in the pipes
         self.Window.destroy()
+        
+    def Reconnect(self):
+        """
+        Reconnect to temperature controller, open Pipes and start graph
+        REMEMBER: Any Button commands can't have arguments otherwise they get called immediately.
+
+        Parameters
+        ----------
+        TCon_Address : Str or Int
+            GPIB or Serial Address for the Temperature controller
+        TMon_Address : STR or INT, optional
+            GPIB or Serial Address for the Temperature monitor/Level Meter
+
+        """
+        TCon_Address=self.Com.get()
+        self.Open_Pipes(TCon_Address)#,TMon_Address)
+        time.sleep(2.5)#wait for pipe to initialise
+        self.UpdateWindow()
 # =============================================================================
 # UPDATE WINDOW FUNCTIONS
 # =============================================================================
@@ -290,7 +350,7 @@ class Mon_Win(tk.Frame):
         """
         Start_T = time.time()
         
-        while(True):
+        while(self.IsMonitoring==True):#TODO: Test 
             # Timeout if it spends too long reading the que, likely because is very full
             if time.time()-Start_T>5:
                 print("Timeout, Queue might be too large!")
@@ -303,16 +363,33 @@ class Mon_Win(tk.Frame):
             #get data from pipe
             Data = self.Temp_PipeRecv.recv()
             #If data isn't a string append to rawdata list
-            
-            if type(Data)!=str:
-                self.current_Data=Data
-            
-            elif Data=="Esc":
-                #self.MeasureFinished()
-                break
-            elif Data=="ClearGraph":
-                self.Temperature_Data = []
-                continue
+            try:
+                types=[type(ob) for ob in Data]
+                if str not in types:
+                    #if they're all numbers then its temperature data, otherwise its a command
+                    self.current_Data=Data
+                
+                elif Data=="Esc":
+                    #self.MeasureFinished()
+                    break
+                elif Data=="ClearGraph":
+                    self.Temperature_Data = []
+                    continue
+            except TypeError as e:
+                #if Data is a single int/float, the types generator wont work. 
+                #because strings are lists of string characters, strings work fine.
+                #But Exceptions are not indexable. If the Handler throws an exception we can catch it here to MakeToast
+                self.IsMonitoring=False#if we receive an exception, stop monitoring
+                if isinstance(Data,Exception):
+                    #Should catch any Exception object (Any exception, TypeError, AttrError...)
+                    #that is sent down the pipe.
+                    #Allows for Error-finding that won't get swamped by other statements on the Terminal.
+                    tk.messagebox.showerror("Found an error!",Data.args[0])
+                    
+                
+                else:
+                    print(e)
+                    
         self.Temperature_Log_Writer.writerow([*self.current_Data])
     
     
@@ -383,6 +460,105 @@ class Mon_Win(tk.Frame):
             self.Window.destroy()
             #if the graph throws an error it keeps compounding. Close window to avoid crashes/weird states.
             #TODO: Make this error handling a little more graceful.
+
+# =============================================================================
+# READ CONTROLLER FUNCTIONS
+# =============================================================================
+    def Read_Controller_Zone(self):
+        """
+        Read the Controller and populate the GUI with the current elements in Zone mode
+
+        """
+        currentModel=self.TC_Model.index(self.Model.get())
+        self.setpoint_entry.delete(0,tk.END)#clear the relevant GUI element
+        self.Temp_PipeRecv.send("T; G")#sends the GET command
+        while self.Temp_PipeRecv.poll():#waits for response
+            self.setpoint_entry.insert(tk.END, str(self.Temp_PipeRecv.recv()))#updates GUI element
+            break
+        if currentModel==0:
+            self.ramp_entry.delete(0,tk.END)
+            self.Temp_PipeRecv.send("RAMP; G")#update Ramp
+            while self.Temp_PipeRecv.poll():
+                self.ramp_entry.insert(tk.END, str(self.Temp_PipeRecv.recv()))
+                break
+            self.Temp_PipeRecv.send("RNG; G")#update Heater Range
+            while self.Temp_PipeRecv.poll():
+                response=int(self.Temp_PipeRecv.recv())#should be 0-5.
+                self.Range_var.set(self.Heater_Range[response])
+                #Because we formatted the range list in the same manner as the ranges in the Lakeshore,
+                #We can just take the response from here as the range. Hopefully. Maybe.
+                break
+        elif currentModel==1:
+            self.Temp_PipeRecv.send("GAS; G")#update Gas Flow
+            while self.Temp_PipeRecv.poll():
+                self.Gas_Entry.set(float(self.Temp_PipeRecv.recv()))
+                break
+            
+    def Read_Controller_PID(self):
+        """
+        Read the controller and Populate the GUI in Manual PID Mode.
+
+        """
+        currentModel=self.TC_Model.index(self.Model.get())
+        self.setpoint_entry.delete(0,tk.END)
+        self.Temp_PipeRecv.send("T; G")#sends the GET command
+        while self.Temp_PipeRecv.poll():#waits for response
+            self.setpoint_entry.insert(tk.END, str(self.Temp_PipeRecv.recv()))#updates GUI element
+            break
+        #Update PIDS. Should be the same over both Temperature controllers
+        self.P_entry.delete(0,tk.END)
+        self.I_entry.delete(0,tk.END)
+        self.D_entry.delete(0,tk.END)
+        self.Temp_PipeRecv.send("PID; G")
+        
+        while self.Temp_PipeRecv.poll():#waits for response
+           PIDs=self.Temp_PipeRecv.recv()
+           self.P_entry.insert(tk.END,PIDs[0])
+           self.I_entry.insert(tk.END,PIDs[1])
+           self.D_entry.insert(tk.END,PIDs[2])
+           break
+       #Controller Specific stuffs
+        if currentModel==0:
+            self.Temp_PipeRecv.send("RNG; G")#update Heater Range
+            while self.Temp_PipeRecv.poll():
+                response=int(self.Temp_PipeRecv.recv())#should be 0-5.
+                self.Range_var.set(self.Heater_Range[response])
+                #Because we formatted the range list in the same manner as the ranges in the Lakeshore,
+                #We can just take the response from here as the range. Hopefully. Maybe.
+                break
+        elif currentModel==1:
+            self.Temp_PipeRecv.send("GAS; G")#update Gas flow
+            while self.Temp_PipeRecv.poll():
+                self.Gas_Entry.set(float(self.Temp_PipeRecv.recv()))
+                break
+           
+    def Read_Controller_Manual(self):
+        """
+        Read controller and populate the GUI in Manual Power mode.
+        NB: with the OI503 this will work even in Zone Mode. Not with the Lakeshores.
+        
+        """
+        currentModel=self.TC_Model.index(self.Model.get())
+        self.Temp_PipeRecv.send("MO; G")#update Manual Power
+        while self.Temp_PipeRecv.poll():
+            self.power_Entry.set(float(self.Temp_PipeRecv.recv()))
+            break
+        #Controller Specific stuffs
+        if currentModel==0:
+            self.Temp_PipeRecv.send("RNG; G")#update Heater Range
+            while self.Temp_PipeRecv.poll():
+                response=int(self.Temp_PipeRecv.recv())#should be 0-5.
+                self.Range_var.set(self.Heater_Range[response])
+                #Because we formatted the range list in the same manner as the ranges in the Lakeshore,
+                #We can just take the response from here as the range. Hopefully. Maybe.
+                break
+        elif currentModel==1:
+            self.Temp_PipeRecv.send("GAS; G")#update Gas flow
+            while self.Temp_PipeRecv.poll():
+                self.Gas_Entry.set(float(self.Temp_PipeRecv.recv()))
+                break
+            
+            
 # =============================================================================
 # ACT ON CONTROLLER FUNCTIONS        
 # =============================================================================
@@ -391,22 +567,31 @@ class Mon_Win(tk.Frame):
         Set the setpoint in Zone Mode and sanitises setpoint and Ramping inputs. Assume that the controller is in Zone
         If ramping is set to true, also activate the Ramping mode.
         """
-        
-        try:
-            ramp_rate=float(self.ramp_entry.get())
-            if self.ramp_enable.get()==True and 0.001<=ramp_rate<=100:
-                self.Temp_PipeRecv.send("RAMP; S; {}".format(ramp_rate))
-            elif self.ramp_enable.get()==True:
-                print("Invalid Ramp Rate! Ramp rate not applied!")
-                self.Temp_PipeRecv.send("NORAMP")
-            else:
-                self.Temp_PipeRecv.send("NORAMP")
-        except ValueError:
-            if self.ramp_enable.get()==True:
-                print("Invalid Ramp rate Entered! Ramp Not enabled!")
-                self.Temp_PipeRecv.send("NORAMP")
-            else:
-                self.Temp_PipeRecv.send("NORAMP")#If you've entered the Bee movie script into the Ramp_enable but havent ticked it, I dont care.
+        currentModel=self.TC_Model.index(self.Model.get()) #allows us to update Gas
+        if currentModel==0:
+            try:
+                ramp_rate=float(self.ramp_entry.get())
+                if self.ramp_enable.get()==True and 0.001<=ramp_rate<=100:
+                    self.Temp_PipeRecv.send("RAMP; S; {}".format(ramp_rate))
+                elif self.ramp_enable.get()==True:
+                    print("Invalid Ramp Rate! Ramp rate not applied!")
+                    self.Temp_PipeRecv.send("NORAMP")
+                else:
+                    self.Temp_PipeRecv.send("NORAMP")
+            except ValueError:
+                if self.ramp_enable.get()==True:
+                    print("Invalid Ramp rate Entered! Ramp Not enabled!")
+                    self.Temp_PipeRecv.send("NORAMP")
+                else:
+                    self.Temp_PipeRecv.send("NORAMP")#If you've entered the Bee movie script into the Ramp_enable but havent ticked it, I dont care.
+        elif currentModel==1:
+              try:
+                  Gas_to_send=float(self.Gas_Entry.get())
+                  self.Temp_PipeRecv.send("GAS; S; {}".format(Gas_to_send))
+              except Exception as e:
+                  print(e)
+                  #again, not sure how you throw this but...          
+            
         try:
             setpoint=float(self.setpoint_entry.get())
             if setpoint < 300 and setpoint >= 0:
@@ -423,23 +608,43 @@ class Mon_Win(tk.Frame):
         Set the Setpoint in Manual PID mode and Stanises inputs for PID.
         Assume that the controller is in Manual Mode
         """
+        currentModel=self.TC_Model.index(self.Model.get())#OI503 and LS have different PID limits. Catch this.
         try:
             P=float(self.P_entry.get())
             I=float(self.I_entry.get())
             D=float(self.D_entry.get())
-            if 0.1 <= P <= 1000 and 0.1<= I <= 1000 and 0<= D<= 200:
-                self.Temp_PipeRecv.send("PID; S; {0},{1},{2}".format(P,I,D))
-            else:
-                print("Invalid PID values! P and I have to be less than 1000, and D under 200")
-                print("Recived PID of {0},{1},{2}".format(P,I,D))
+            if currentModel==0:
+                if 0.1 <= P <= 1000 and 0.1<= I <= 1000 and 0<= D<= 200:
+                    self.Temp_PipeRecv.send("PID; S; {0},{1},{2}".format(P,I,D))
+                else:
+                    print("Invalid PID values! P and I have to be less than 1000, and D under 200")
+                    print("Recived PID of {0},{1},{2}".format(P,I,D))
+            elif currentModel==1:
+                if  0<= I <= 140 and 0<= D<= 273:
+                    self.Temp_PipeRecv.send("PID; S; {0},{1},{2}".format(P,I,D))
+                    #TODO: Make is so that PIDS can be broadcast seperately. Low priority. 
+                    #Would rather use a "read" command to populate PID GUI elements from OPS POV.
+                else:
+                    print("Invalid PID values! I has to be less than 140, and D under 273")
+                    print("Recived PID of {0},{1},{2}".format(P,I,D))
         except ValueError:
             print("PIDs could not be cast as Float! PIDS unchanged!")
-            
-        try:
-            Range_to_send=self.Heater_Range.index(self.Range_var.get())
-            self.Temp_PipeRecv.send("RNG; S; {}".format(Range_to_send))
-        except ValueError:
-            print("No Range Entered, Range Not changed!")
+        
+        if currentModel==0:    
+            try:
+                Range_to_send=self.Heater_Range.index(self.Range_var.get())
+                self.Temp_PipeRecv.send("RNG; S; {}".format(Range_to_send))
+            except ValueError:
+                print("No Range Entered, Range Not changed!")
+        elif currentModel==1:
+            try:
+                Gas_to_send=float(self.Gas_Entry.get())
+                self.Temp_PipeRecv.send("GAS; S; {}".format(Gas_to_send))
+                #Todo:Test this. 
+            except Exception as e:
+                print(e)
+                #again, not sure how you throw this but...
+                
             
         try:
             setpoint=float(self.setpoint_entry.get())
@@ -453,11 +658,20 @@ class Mon_Win(tk.Frame):
             print("Invalid Temperature Setpoint given! Has to be able to be cast as a float!")
             
     def set_Manual_Power(self):
-        try:
-            Range_to_send=self.Heater_Range.index(self.Range_var.get())
-            self.Temp_PipeRecv.send("RNG; S; {}".format(Range_to_send))
-        except ValueError:
-            print("No Range Entered, Range Not changed!")
+        currentModel=self.TC_Model.index(self.Model.get())
+        if currentModel==0:    
+            try:
+                Range_to_send=self.Heater_Range.index(self.Range_var.get())
+                self.Temp_PipeRecv.send("RNG; S; {}".format(Range_to_send))
+            except ValueError:
+                print("No Range Entered, Range Not changed!")
+        elif currentModel==1:
+            try:
+                Gas_to_send=float(self.Gas_Entry.get())
+                self.Temp_PipeRecv.send("GAS; S; {}".format(Gas_to_send))
+            except Exception as e:
+                print(e)
+                #again, not sure how you throw this but...
         
         try:
             power_to_send=float(self.power_Entry.get())
@@ -476,7 +690,11 @@ class Mon_Win(tk.Frame):
         self.Temp_PipeRecv.send("ALLOFF")
         self.Temp_PipeRecv.send("PO; S; 0")
         self.Temp_PipeRecv.send("T; S; 0")
-        
+
+# =============================================================================
+# CHANGE MODE FUNCTIONS
+# =============================================================================
+
     def ChangeMode(self,var,index,mode):
         """
         Code to change the mode in both GUI elements and Applied mode in the Heater controller. 
@@ -486,17 +704,24 @@ class Mon_Win(tk.Frame):
         
         """
         NewMode=self.Mode_Select.index(self.Mode.get())
+        currentModel=self.TC_Model.index(self.Model.get())
         if NewMode==0:#Zone Mode
             self.P_entry.grid_remove()
             self.I_entry.grid_remove()
             self.D_entry.grid_remove()
             self.power_Entry.grid_remove()
             self.power_Label.grid_remove()#Remove Unecessary GUI Elements
-            self.setpoint_entry.grid()
-            self.ramp_button.grid()
-            self.ramp_entry.grid()#re-show necessary GUI elements.
+            self.setpoint_entry.grid()#re-show necessary GUI elements.
+            if currentModel==0:
+                self.ramp_button.grid()
+                self.ramp_entry.grid()#only show this if we're using a Lakeshore.
+            elif currentModel==1:
+                self.ramp_enable=False
+                #explicitly set this. Probably unneccessary, as Ramp isnt live on the OI Temperature_controller
             self.Temp_PipeRecv.send("HMD; S; Z")
             self.setpoint_Button.configure(command=self.set_Setpoint_Zone)#make sure correct values are being passed
+            self.read_button.configure(command=self.Read_Controller_Zone)
+        
         elif NewMode==1 :#Open Loop Control
             self.P_entry.grid_remove()
             self.I_entry.grid_remove()
@@ -508,6 +733,8 @@ class Mon_Win(tk.Frame):
             self.power_Label.grid()
             self.Temp_PipeRecv.send("HMD; S; MO")
             self.setpoint_Button.configure(command=self.set_Manual_Power)
+            self.read_button.configure(command=self.Read_Controller_Manual)
+        
         elif NewMode==2:#Manual PID mode
             self.power_Entry.grid_remove()
             self.power_Label.grid_remove()
@@ -519,164 +746,35 @@ class Mon_Win(tk.Frame):
             self.D_entry.grid()
             self.Temp_PipeRecv.send("HMD; S; MP")
             self.setpoint_Button.configure(command=self.set_Setpoint_PID)
+            self.read_button.configure(command=self.Read_Controller_PID)
             
+    def ChangeModel(self,var,index,mode):
+        """
+        Code to setup the GUI to work with a new model of temperature controller
+        Added to Trace on the Model variable so should ONLY be called when the option is changed
+        Parameters are TK stuff, not used.        
+
+        """
+        tk.messagebox.showinfo(title="Changing Temperature Controller", message="Changing temperature controller. CLosing pipes")
+        self.IsMonitoring=False
+        self.Temp_PipeRecv.send("STOP")
+        self.Current_Log.close()
+        self.StartButton.configure(command=self.Reconnect,text="Reconnect",bg="red")
+        NewModel=self.TC_Model.index(self.Model.get())
+        currentMode=self.Mode_Select.index(self.Mode.get())
+        if NewModel==0:#Lakeshore350
+            self.Gas_Entry.grid_remove()#uneeded GUI element
+            self.Gas_Label.grid_remove()
             
-        
-
-def Controller(Pipe,TCon_add,Backup_TConAdd, TMon_add=None):
-    """
-    Multiprocessing Process for Temperature Monitoring
-    Last 2 elements in the pipe must always be the IsRamping and IsStable Bools. Make sure to Slice before plotting!
-    Currently Assumes that you're doing Loop 1 connected to sensor A
-        
-    Special Commands that can be sent through the pipe to the Controller:
-        ALLOFF=Turns the Heaters on the Controller OFF
-        NORAMP, Turns Ramping Off.
-        
-    Standard Commands have the Syntax;
-        Parameter; X; Y
-        X is either S(set) or G(get). Y is the Parameter to Be entered. Assumed Sanitary at this pt.
-        
-    Parameters are
-    HMD; Heater Mode, can be be Z (Zone), MP (Manual PID) or MO (Manual Output).
-    T; Setpoint in K
-    PO; Manual Power output in %
-    PID: PID paramters. In this case, the Parameter is a list of len 3 containing P I and D
-    RNG: Heater Range
-    RAMP: Ramp rate in K/min
-        
-      
-
-    Parameters
-    ----------
-    Pipe : Pipe
-        PipeSend to pass things through
-        Data is passed in the format; [current Time,VTI Temperature, Sample Temperature,
-                                       "1st Stage","2nd Stage","Magnet 1", "Magnet 2","Helium Pot",
-                                       "Switch Heater", isramping bool, is stablebool] 
-    TCon_add : VISA address for the temperature Controller
-    Backup_TConAdd: The contents of the GPIB entry from the gUI to allow Reconnecting if incorrect 
-    Addresses entered.
-    WARNING: AT CURRENT MOMENT, NO WAY TO RECONNECT TO TEMPERATURE MONITOR. HAVE TO CLOSE+REOPENT WINDOW
-    
-    TMon_add : VISA address for a Temperature Monitor.
-
-    """
-    rm = pyvisa.ResourceManager()
-    Abort = False
-    IsRamping=False#Bool to tag if temperature is ramping
-    IsStable=False#Placeholder for Stability criteria.
-    try:
-        T_Con = Inst.lakeshore350(rm,TCon_add)
-        if TMon_add != None:
-            T_Mon=Inst.lakeshore218(rm,TMon_add)
-        else:
-            T_Mon=None
-    except Exception as e:
-        print(e)
-        print("Error IN Connection")
-        Pipe.send("Esc")
-        # isConnected=False
-        # iterator=0
-        # while isConnected==False:
-        #     try:
-        #         T_Con = Inst.lakeshore350(rm,Backup_TConAdd)
-        #         isConnected=True
-        #     except Exception:
-        #         iterator+=1
-        #         time.sleep(0.1)
-        #         if iterator == 100:
-        #             print("TIMEOUT ON RECONNECT")        
-        #             
-        #     #TODO: Test this
-        #             return
-    print("Successfully Connected To Temperature Controller")
-    while Abort == False:
-    
-        Current_TCon_VTI=T_Con.getTempN("A")
-        Current_TCon_Sample=T_Con.getTempN("B")
-        if T_Mon != None:
-            Current_TMon=T_Mon.getTempAll()
-            
-        else:
-            Current_TMon=[]
-        Pipe.send([time.time(),Current_TCon_VTI,Current_TCon_Sample,*Current_TMon,IsRamping,IsStable])#sends the current reading of the pipes to be read
-        
-        #time.sleep(0.25)
-# =============================================================================
-#         PIPE NOW CHECKS FOR INPUT
-# =============================================================================
-        if Pipe.poll():# If this isnt there, Pipe will Wait for input and do nothing
-            Comm = Pipe.recv()
-
-            if Comm=="STOP":
-                Abort=True
-            elif Comm =="ALLOFF":
-                T_Con.allOff()
-            elif Comm == "NORAMP":
-                T_Con.setRampRate(1,0,0)
-    # =============================================================================
-    #        PIPE NOW CHECKS FOR GET COMMANDS
-    # =============================================================================
-            else:
-                Param=re.split(";", str(Comm))#TODO: Check that this works when no comms
-                if len(Param) ==2:#I'M VIOLATING MY OWN GUIDELINES AND YOU CANT STOP ME!!!
-                #In Essence, as the "Read" Command wont send a setpoint, we can take Param of Len 2 to always be a "Get" command
-                #Yes this does allow you to Send "T; Red Dragon Archfiend" as a valid get command but SHHH. 
-                    if re.search("HMD",Param[0]):
-                        mode=T_Con.getOutputMode(1)[0]
-                        if mode==3:
-                            mode="MO"
-                        elif mode==2:
-                            mode="Z"
-                        elif mode==1:
-                            mode="MP"
-                        Pipe.send(mode)
-                    elif re.search("T",Param[0]):
-                        Pipe.send(T_Con.getTempSetpointN(1))
-                    elif re.search("PO",Param[0]):
-                        Pipe.send(T_Con.readMout(1))
-                    elif re.search("PID",Param[0]):
-                        Pipe.send([T_Con.getPID(1)])
-                    elif re.search("RNG",Param[0]):
-                        Pipe.send(T_Con.getRange(1))
-                    elif re.search("RAMP",Param[0]):
-                        Pipe.send(T_Con.getRampRate(1))
-                    else:
-                        print("Invalid Get Command")
-    # =============================================================================
-    #             PIPE NOW CHECKS FOR SET COMMANDS
-    # =============================================================================
-                elif len(Param)==3:
-                    #again, assuming a command with 3 things would be a Set command
-                    if re.search("HMD",Param[0]):
-                        
-                        if re.search("MO",Param[2]):
-                            T_Con.setOutputMode(1,3,1,0)
-                        elif re.search("Z",Param[2]):
-                            T_Con.setOutputMode(1,2,1,0)
-                        elif re.search("MP",Param[2]):
-                            T_Con.setOutputMode(1,1,1,0)
-                        
-                    elif re.search("T",Param[0]):
-                        T_Con.setTempSetpointN(1,float(Param[2]))
-                    elif re.search("PO",Param[0]):
-                        T_Con.ManOut(1,float(Param[2]))
-                        Pipe.send(T_Con.readMout(1))
-                    elif re.search("PID",Param[0]):
-                        list_PID=Param[2].split(",")
-                        #break up PID into a Len3 list. This is why you split by semicolon in the first case
-                        T_Con.setPID(1,float(list_PID[0]),float(list_PID[1]),float(list_PID[2]))
-                    elif re.search("RNG",Param[0]):
-                        T_Con.setRange(1,int(Param[2]))
-                    elif re.search("RAMP",Param[0]):
-                        T_Con.setRampRate(1,1,float(Param[2]))
-                    else:
-                        print("Invalid Set Command")
-        # =============================================================================
-        #             ERROR/DO NOTHING CASE
-        # =============================================================================
-                else:
-                    print("Invalid String Command Seen IN Temp. Controller! Got{}".format(Param))#debugging code fragment to delete
-                time.sleep(0.1)#allow buffer to clear before querying it again
+            self.range_Entry.grid()
+            if currentMode==0: #zone Mode, so ramp is now enabled
+                self.ramp_button.grid()
+                self.ramp_entry.grid()
+        elif NewModel==1:
+            self.ramp_button.grid_remove()
+            self.ramp_entry.grid_remove()
+            self.ramp_enable=False#again, explicitly set out of paranoia
+            self.range_Entry.grid_remove()
+            self.Gas_Label.grid()
+            self.Gas_Entry.grid()#show Gas slider.
                 

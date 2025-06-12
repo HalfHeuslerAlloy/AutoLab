@@ -54,7 +54,11 @@ class Instrument(object):
                     raise Exception("Invalid COM Address. Expected an Int or a string beginning ASRL, got {}".format(channel))
             
     def __del__(self):
-        self.VI.close()
+        try:
+            self.VI.close()
+        except AttributeError:
+            pass #if connection is unsuccessful, program may try to delete the instrument object
+            #this raises an Attribute Error (No VI to close!) Catch this.
     
     def Write (self,message):
         """
