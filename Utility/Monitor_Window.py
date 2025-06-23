@@ -62,7 +62,7 @@ class Mon_Win(tk.Frame):
     
     
     
-    def __init__(self, master,parent,default_addresses):
+    def __init__(self, master,parent,default_addresses, model=0):
         #assume that the last element of the Default addresses is the temperature monitor
         super().__init__(master)#adds all the TK objects in
         self.parent=parent
@@ -80,7 +80,8 @@ class Mon_Win(tk.Frame):
             rm.close()
         #if addresses are supplied through the script which calls this util, we dont need to poll all instruments
         #speeds up loading the util
-        self.Model=tk.StringVar(Control_Frame,"Lakeshore_350")
+        self.Model=tk.StringVar(Control_Frame,self.TC_Model[model])
+        #Should Attempt to Initialise with whatever model Temperature controller was given at main button press. 
         self.ModelEntry=tk.OptionMenu(Control_Frame, self.Model, *self.TC_Model)
         self.Model.trace_add("write", self.ChangeModel)
         #future-proofing if we want to apply this to, say, HgITCs
