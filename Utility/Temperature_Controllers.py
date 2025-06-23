@@ -10,7 +10,7 @@ import pyvisa
 import time
 import re
 
-def Lakeshore_350_Controller(Pipe,TCon_add,Backup_TConAdd, TMon_add=None):
+def Lakeshore_350_Controller(Pipe,TCon_add, TMon_add=None):
     """
     Multiprocessing Process for Temperature Monitoring using Lakeshores. 
     They're so good. They've basically got a unified command syntax.
@@ -60,25 +60,14 @@ def Lakeshore_350_Controller(Pipe,TCon_add,Backup_TConAdd, TMon_add=None):
             T_Mon=Inst.lakeshore218(rm,TMon_add)
         else:
             T_Mon=None
+        print("Successfully Connected To Temperature Controller")
     except Exception as e:
         print(e)
         print("Error IN Connection")
         Pipe.send("Esc")
-        # isConnected=False
-        # iterator=0
-        # while isConnected==False:
-        #     try:
-        #         T_Con = Inst.lakeshore350(rm,Backup_TConAdd)
-        #         isConnected=True
-        #     except Exception:
-        #         iterator+=1
-        #         time.sleep(0.1)
-        #         if iterator == 100:
-        #             print("TIMEOUT ON RECONNECT")        
-        #             
-        #     #TODO: Test this
-        #             return
-    print("Successfully Connected To Temperature Controller")
+        Abort=True
+
+
     while Abort == False:
     
         Current_TCon_VTI=T_Con.getTempN("A")
@@ -173,7 +162,7 @@ def Lakeshore_350_Controller(Pipe,TCon_add,Backup_TConAdd, TMon_add=None):
                 time.sleep(0.1)#allow buffer to clear before querying it again
     return()#once we've exited that While loop should be ok to return and close the fn.
 
-def OI_503_Controller(Pipe,TCon_add,Backup_TConAdd):
+def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
     """
     Multiprocessing Process for Temperature Monitoring Using the OI503
     Last 2 elements in the pipe must always be the IsRamping and IsStable Bools. Make sure to Slice before plotting!
@@ -203,12 +192,10 @@ def OI_503_Controller(Pipe,TCon_add,Backup_TConAdd):
         Data is passed in the format; [current Time,VTI Temperature, Sample Temperature,
                                        "1st Stage","2nd Stage","Magnet 1", "Magnet 2","Helium Pot",
                                        "Switch Heater", isramping bool, is stablebool] 
-    TCon_add : VISA address for the temperature Controller
-    Backup_TConAdd: The contents of the GPIB entry from the gUI to allow Reconnecting if incorrect 
-    Addresses entered.
-    WARNING: AT CURRENT MOMENT, NO WAY TO RECONNECT TO TEMPERATURE MONITOR. HAVE TO CLOSE+REOPENT WINDOW
+    TCon_add : VISA address for the temperature Controller.
+    NB: Assumes that at this point the correct Address is Entered. If not, should Return and Close itself.
     
-    TMon_add : VISA address for a Temperature Monitor.
+    LMon_add : VISA address for a LevelMeter.
 
     """
     rm = pyvisa.ResourceManager()
@@ -217,32 +204,30 @@ def OI_503_Controller(Pipe,TCon_add,Backup_TConAdd):
     IsStable=False#Placeholder for Stability criteria.
     try:
         T_Con = Inst.OI_503(rm,TCon_add)
+        if LMon_add != None:
+            L_Mon=Inst.OI_ILM(rm,LMon_add)
+        else:
+            L_Mon=None
+        print("Successfully Connected To Temperature Controller")
     except Exception as e:
         print(e)
         print("Error IN Connection")
         Pipe.send(e)
         Pipe.send("Esc")
-        # isConnected=False
-        # iterator=0
-        # while isConnected==False:
-        #     try:
-        #         T_Con = Inst.lakeshore350(rm,Backup_TConAdd)
-        #         isConnected=True
-        #     except Exception:
-        #         iterator+=1
-        #         time.sleep(0.1)
-        #         if iterator == 100:
-        #             print("TIMEOUT ON RECONNECT")        
-        #             
-        #     #TODO: Test this
-        #             return
-    print("Successfully Connected To Temperature Controller")
+        Abort=True
+
+   
     while Abort == False:
     
         Current_TCon_VTI=T_Con.getTempN("1")
         Current_TCon_Sample=T_Con.getTempN("2")
-
-        Pipe.send([time.time(),Current_TCon_VTI,Current_TCon_Sample,IsRamping,IsStable])#sends the current reading of the pipes to be read
+        
+        Current_LMon=[]
+        if L_Mon is not None:
+            Current_LMon.append(L_Mon.getLevelN(1))
+            Current_LMon.append(L_Mon.getLevelN(2))#query channels 1 and 2. If there is no Lmon, should return a blank list
+        Pipe.send([time.time(),Current_TCon_VTI,Current_TCon_Sample,*Current_LMon,IsRamping,IsStable])
+        #sends the current reading of the pipes to be read
         
         #time.sleep(0.25)
 # =============================================================================

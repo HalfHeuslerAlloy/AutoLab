@@ -306,7 +306,11 @@ class Mon_Win(tk.Frame):
         self.Current_Log=open(self.Log_SavePath,"w")
         self.Temperature_Log_Writer=csv.writer(self.Current_Log, delimiter='\t',quotechar='|')
         #TAB GANG BAYBE
-        self.Temperature_Log_Writer.writerow(["Time","VTI Temperature","Sample_Temperature","1st Stage Temp","2nd Stage Temp","Magnet 1","Magnet 2", "He Pot", "Switch Heater"])
+        if Controller == "Lakeshore_350":
+            self.Temperature_Log_Writer.writerow(["Time","VTI Temperature","Sample_Temperature","1st Stage Temp","2nd Stage Temp","Magnet 1","Magnet 2", "He Pot", "Switch Heater"])
+        elif Controller == "OI_503" :
+            self.Temperature_Log_Writer.writerow(["Time","VTI Temperature","Sample_Temperature","He Level","N2 Level"])#TODO: Check that these are the correct channel Markers
+        
         
             
        
