@@ -362,6 +362,8 @@ class Mon_Win(tk.Frame):
                 break
             
             #Check if there is something to recieve in the pipe
+            #If there isnt, Exit the While loop. This is why this needs to be Called in UpdateWindow,
+            #Otherwise it will just Stop.
             if not self.Temp_PipeRecv.poll():
                break
             
@@ -395,7 +397,7 @@ class Mon_Win(tk.Frame):
                 else:
                     print(e)
                     
-        self.Temperature_Log_Writer.writerow([*self.current_Data])
+            self.Temperature_Log_Writer.writerow([*self.current_Data])
     
     
     def UpdateWindow(self):

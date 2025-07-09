@@ -13,7 +13,7 @@ from Instruments.Instrument_Class import Instrument
 import time
 import numpy as np
 
-class Oxford_ILM(Instrument):
+class OI_ILM(Instrument):
     
     def __init__(self,rm,address):
         """
@@ -27,11 +27,11 @@ class Oxford_ILM(Instrument):
             Comms address to connect to the Temperature Controller
             Int will parse as a GPIB adress, or String as an address from
             pyvisa.list_resources
-
-
+            
         """
-        super.__init__(rm,address)
+        super.__init__(rm,address,GPIB=False)
         #connects to the instrument using the Instrument_class init parameters
+        #Assumes stop bits and parity is None, cos I can't find any in the Manual
         self.VI.write_termination=self.VI.CR
         self.VI.read_termination=self.VI.CR #read/write termination
         
@@ -66,7 +66,7 @@ class Oxford_ILM(Instrument):
             raise Exception("Invalid Channel Selection for ILM; Could not be Cast as Int")
         
         if N in range (1,4):
-            return(self.Query("R"+str(N)))
+            return(self.__chkFloat(self.Query("R"+str(N))))
         else:
             raise Exception("Invalid Channel Number for ILM, expected an Int between 1 and 3, got {}".format(N))
             

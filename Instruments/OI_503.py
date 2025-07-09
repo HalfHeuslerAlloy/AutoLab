@@ -11,7 +11,7 @@ from Instruments.Instrument_Class import Instrument
 import time
 import numpy as np
 
-class Oxford_503(Instrument):
+class OI_503(Instrument):
     def __init__(self,rm,address):
         """
         Initialise the OI 503
