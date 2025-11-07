@@ -14,7 +14,7 @@ from Instruments.Instrument_class import Instrument
 import numpy as np 
 root_two=np.sqrt(2)
 
-class SR830 (Instrument):
+class SR860 (Instrument):
     def __init__(self,rm,Comm_Address):
         """
         Initialises the object as a Stanford SR860 Lockin
@@ -449,35 +449,35 @@ class SR830 (Instrument):
     @property
     def X(self):
         """Returns X component of lock-in measure."""
-        return self.__chkFloat(self.Query('OUTP?1'))
+        return self.__chkFloat(self.Query('OUTP? 0'))
     @property
     def Y(self):
         """Returns Y component of lock-in measure."""
-        return self.__chkFloat(self.Query('OUTP?2'))
+        return self.__chkFloat(self.Query('OUTP? 1'))
     @property
     def XY(self):
         """Returns XY component of lock-in measure."""
-        return self.__chkFloatList(self.Query('SNAP?1,2'))
+        return self.__chkFloatList(self.Query('SNAP? 0,1'))
     @property
     def Magnitude(self):
         """Returns Magnitude of lock-in measure."""
-        return self.__chkFloat(self.Query('OUTP?3'))
+        return self.__chkFloat(self.Query('OUTP? 2'))
     @property
     def X_PP(self):
         """Returns peak-peak X component of lock-in measure."""
-        return (self.__chkFloat(self.Query('OUTP?1')))*root_two
+        return (self.__chkFloat(self.Query('OUTP? 0')))*root_two
     @property
     def Y_PP(self):
         """Returns peak-peak Y component of lock-in measure."""
-        return (self.__chkFloat(self.Query('OUTP?2')))*root_two
+        return (self.__chkFloat(self.Query('OUTP? 1')))*root_two
     @property
     def XY_PP(self):
         """Returns peak-peak XY component of lock-in measure."""
-        return (self.__chkFloatList(self.Query('SNAP?1,2')))*root_two#most likely to fall over
+        return (self.__chkFloatList(self.Query('SNAP? 0,1')))*root_two#most likely to fall over
     @property
     def Magnitude_PP(self):
         """Returns peak-peak Magnitude of lock-in measure."""
-        return (self.__chkFloat(self.Query('OUTP?3')))*root_two
+        return (self.__chkFloat(self.Query('OUTP? 2')))*root_two
     @property
     def Phase(self):
         """Returns Phase of lock-in measure."""

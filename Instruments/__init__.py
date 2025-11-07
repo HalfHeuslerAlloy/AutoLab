@@ -16,6 +16,7 @@ from .IPS120 import *
 from .SMS120C import *
 from .Arroyo4300 import *
 from .SR830 import *
+from .SR860 import *
 from .lakeshore350 import*
 from .lakeshore218 import *
 from .Keithley6221 import *
