@@ -619,9 +619,11 @@ class Window(tk.Frame):
                     self.y1Data = []
                     self.y2Data = []
                     continue
-                elif Data=="NewFile":
+                elif str(Data).startswith("NewFile"):
                     self.CloseSaveFile()
-                    self.CreateFile(self.filenameInput.get())
+                    #get filename and add everything after 'Newfile '
+                    filename = self.filenameInput.get()
+                    self.CreateFile(filename[:-4] + Data[8:] + filename[-4:])
                     #now have new save file but want the plotted data to reflect whats in the file, 
                     #so duplicate the above fn.
                     self.Data = []
