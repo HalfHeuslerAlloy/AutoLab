@@ -27,7 +27,7 @@ class OI_503(Instrument):
 
 
         """
-        super.__init__(rm,address)
+        super().__init__(rm,address)
         #connects to the instrument using the Instrument_class init parameters
         self.VI.write_termination=self.VI.CR
         self.VI.read_termination=self.VI.CR #read/write termination

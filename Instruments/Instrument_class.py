@@ -3,6 +3,10 @@
 Created on Mon Feb 17 11:35:57 2025
 Generic Class for Instruments. Generic instrument terms (Read/Write/Query) should be defined here so that code
 Errors can be processed easier.
+
+POssibly bad coding practice. I'm using the exceptions raised by the drivers as flow control but since its for errors anyway, 
+Speed isnt an issue.
+
 Note; This cements self.VI as the syntax for direct write to instruments.
 
 @author: eencsk

@@ -7,10 +7,10 @@ Driver for the Keithley 236 SMU
 """
 
 import re
-from Instruments.Instrument_Class import Instrument
+from Instruments.Instrument_class import Instrument
 import time
 import numpy as np
-
+from math import log10, fmod #only import functions we need
 
 
 class Keithley236(Instrument):
@@ -38,9 +38,9 @@ class Keithley236(Instrument):
         None.
 
         """
-        super.__init__(rm,address)
-        self.VI.write_termination = self.VI.CRLF
-        self.VI.read_termination = self.VI.CRLF
+        super().__init__(rm,address)
+        self.VI.write_termination = self.VI.LF
+        self.VI.read_termination = self.VI.LF
         self.Mode=mode#here so that we can set ranges and compliances accordingly
         self.Write(self.modelist[self.Mode])
         
@@ -163,7 +163,7 @@ class Keithley236(Instrument):
                 if Source_Range>0 and abs(Bias)>(1.1*(10**(Source_Range-1))):
                     raise Exception("Voltage Source Overrange! Range index={0}, Bias Supplied={1}".format(Source_Range,Bias))
                 else:
-                    self.Write(("B{0},{1},{2}X").format(Source_Range,Bias,Delay))
+                    self.Write(("B{0},{1},{2}X").format(Bias,Source_Range,Delay))
                     return()
         else:
             #Source I Mode
@@ -174,7 +174,7 @@ class Keithley236(Instrument):
                 if Source_Range>0 and abs(Bias)>(10**(Source_Range-10)):
                     raise Exception("Current Bias overrange! Max current={}, Bias Requested={}".format((10**(Source_Range-10)),Bias))
                 else:
-                    self.Write(("B{0},{1},{2}X").format(Source_Range,Bias,Delay))
+                    self.Write(("B{0},{1},{2}X").format(Bias,Source_Range,Delay))
                     return()
     
     def data_Format(self, lines, items=4,form=1):
@@ -182,6 +182,7 @@ class Keithley236(Instrument):
         Set the Format of data Returned from the K236
         As lines is the one most likely to change, (between sweep and DC), 
         Everything else is set to something I think will be useful. 
+        THINK this is your "Get Data" Function?
         
         Parameters
         ----------
@@ -216,11 +217,12 @@ class Keithley236(Instrument):
             lines=int(lines)
             items=int(items)
             form=int(form)
-            self.Write("G{},{},{}X".format(items,form,lines))
+            self.Query("G{},{},{}X".format(items,form,lines))
             
     def set_Trigger(self,Origin=3,In=0,Out=0,End=1):
         """
         Set the trigger for the Keithley 236. Seems mainly to do with Sweep operation
+        NB: Does not ENABLE the trigger, only sets when and where it should send/waitfor a trigger pulse
 
         Parameters
         ----------
@@ -291,5 +293,117 @@ class Keithley236(Instrument):
         else:
             self.Write("S{}X".format(int(Option)))
             
-    def set_sweep()
+    def set_sweep(self, sweep_list,delay=0,DPP=1):
+        """
+        Programs a sweep from an array of levels 
+        NB: Assumes Mode is already set and calculates ranges accordingly
+        
+        Uses the "Fixed Level" sweep option and appends the points
+        to the list. This should allow you to create an arbitrary IV characteristics
+        TODO: Test that this works and doesnt flick the output all over the place.
+        Also test if we need a Time.Sleep between all Sweep points.
+
+        Parameters
+        ----------
+        sweep_list : Array-like
+            List of datapoints to do sweep. Max 1000
+        delay : Array-like of Ints or Int, optional
+            Delay before taking a measurement in ms. If an array must be the same Len as sweep_list,
+            which will then apply that point-wise. If Int, sets it for all points. The default is 0
+        DPP : Int, optional
+            Data-Per-Point. How many datapoints will be taken at each sweep step. Assumed constant throughout sweep The default is 1.
+
+        Returns
+        -------
+        None 
+
+        """
+        sweep_list=np.array(sweep_list,dtype=float)#convert to nparray for reason. should throw a valueerror if a non-number is passed
+        delay=np.array(delay,dtype=int)#force delay into int and make it so we can np.size() it.
+        sweep_size=np.size(sweep_list)
+        if np.size(delay)==1:
+            delay=np.full(sweep_size,delay)#create array full of the delay value
+        elif np.size(delay) != sweep_size:
+            raise ValueError("Sweep and Delay Must be the same size if Arrays! Sweep_Size={}, Delay_size={}".format(sweep_size,np.size(delay)))
             
+        range_test=np.max(abs(sweep_list))#first find appropiate range  
+        if self.Mode==1:
+            if range_test < 110:#make sure voltages are in-range
+                range_test=divmod(log10(range_test),1)#gets appropriate power of 10
+                if range_test[1]<0.04:#case where we're less than 1.1 times pow10
+                    Source_Range=int(range_test[0])+1
+                else:#case where we're more than 1.1xpow10
+                    Source_Range=int(range_test[0])+2
+            else:
+                raise ValueError("Voltage overrange! Max voltage is pm 110 V!")
+        elif self.Mode==3:
+            if range_test < 0.1:
+                Source_Range=10+int(log10(range_test))#it just works
+            else:
+                raise ValueError("Current Overrange! Max current is 100 mA!")
+        else:
+            raise ValueError("Wrong Mode Detected! Must be Either 1 (Voltage Source) or 3 (Current Source) Current Mode={}".format(self.Mode))           
+            
+            
+# =============================================================================
+#             START ACTUALLY WRITING THE SWEEP
+# =============================================================================
+        self.Write("Q0,{},{},{},{}X".format(sweep_list[0],Source_Range,delay[0],DPP))#create list.
+        for x in range(1,sweep_list.size()):
+            self.Write("Q6,{},{},{},{}X".format(sweep_list[0],Source_Range,delay[0],DPP))#append points to list. Unsure if we need X on every line here.
+            
+        
+    def enable_Trigger(self,Enable=True):
+        """
+        Enables or Disables the Trigger Sending/Receiving
+
+        Parameters
+        ----------
+        Enable : Bool, optional
+            DESCRIPTION. The default is True.
+
+        Returns
+        -------
+        None.
+
+        """
+        if Enable ==True:
+            self.Write("R1X")
+        elif Enable ==False:
+            self.Write("R0X")
+        else:
+            raise Exception("K236 Trigger enable not a Bool! Trigger Unchanged!")
+    
+    def Operate (self,Enable):
+        """
+        Enables or Disables the Output
+
+        Parameters
+        ----------
+        Enable : Bool, 
+            Whether to enable the output of the K236
+
+        Returns
+        -------
+        None.
+
+        """
+        if Enable ==True:
+            self.Write("N1X")
+        elif Enable ==False:
+            self.Write("N0X")
+        else:
+            raise Exception("K236 Output enable not a Bool! Output Unchanged!")
+            
+    def Trigger(self):
+        """
+        Immediately sends a Trigger pulse to the K236
+
+        Returns
+        -------
+        None.
+
+        """
+        self.Write("H0X")
+    
+    

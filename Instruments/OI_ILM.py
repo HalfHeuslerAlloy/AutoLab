@@ -29,7 +29,7 @@ class OI_ILM(Instrument):
             pyvisa.list_resources
             
         """
-        super.__init__(rm,address,GPIB=False)
+        super().__init__(rm,address,GPIB=False)
         #connects to the instrument using the Instrument_class init parameters
         #Assumes stop bits and parity is None, cos I can't find any in the Manual
         self.VI.write_termination=self.VI.CR
