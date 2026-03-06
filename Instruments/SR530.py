@@ -9,6 +9,7 @@ Driver for the old-style SRS530 Lockin. Again, trying to keep a consistent synta
 
 from Instruments.Instrument_class import Instrument
 import numpy as np 
+from time import sleep
 root_two=np.sqrt(2)
 
 class SR530(Instrument):
@@ -452,6 +453,7 @@ class SR530(Instrument):
         YPand=int(self.Query("E 2"))
         if XPand ==1 or YPand == 1:
             self.IsExpand=True#add way to set the IsExpand from a "read instrument" routine
+        return(XPand,YPand)
             
     def AutoPhase(self):
         """
@@ -517,6 +519,68 @@ class SR530(Instrument):
     
     def getBandPass(self):
         return(bool(self.Query("B")))
+    
+    def quickRange(self):
+        """
+        Attempts a quick Autorange on the Lockins
+        Aims for the signal to be between 10-90% of Fullrange
+
+        Returns
+        -------
+        The XY values read by the lockin
+
+        """
+        no_Ref=False
+        unlocked_Ref=False #First check that there is a consistent reference signal for 1 s
+        for x in range (0,10):
+            no_Ref=bool(self.Query("Y2"))
+            unlocked_Ref=bool(self.Query("Y3"))
+            sleep(0.1)
+        
+        if no_Ref == True or unlocked_Ref == True:
+            raise Exception("Cannot Autorange 530, No Reference Detected!")
+        else:
+            self.XOffset()
+            self.YOffset()
+            self.ROffset()
+            self.setExpand()#disable offsets and expands.
+            
+            inRange=False
+
+            Time_const=self.getTC()
+            dev=Time_const//2
+            mod=Time_const%2
+            if mod == 1:
+                full_TC=1*10**(-3+dev)
+            else:
+                full_TC=3*10**(-4+dev)
+            
+            while inRange == False:
+                sens=int(self.Query("G"))
+                dev=sens//3
+                mod=sens%3
+                if mod == 1:
+                    fullsens=1*10**(-8+dev)
+                elif mod ==2:
+                    fullsens=2*10**(-8+dev)
+                else:
+                    fullsens=5*10**(-9+dev)#quick-n-dirty way of getting full-range sensitivity from the G-table
+                
+                if self.Query("Y4") == 1 or self.X > fullsens*0.7: #high range, either overloaded or over 70% of Full-range.
+                    self.Write("K 27")
+                    #nudge sensitivity up. Why is it called sensitivity... 
+                elif self.X < fullsens*0.3: #low-range.
+                    self.Write("K 28")
+                else:
+                    inRange = True
+        
+                sleep(full_TC*2)#wait 2 TCs to stabilise before taking next measurement
+                #WARNING: IF YOUR TC IS THE MAX VALUE OF 100 S, THIS ROUTINE WILL TAKE ~5 MINS PER STEP!
+                #But if it is 100 s you either know what you're doing or need to think about your life...
+                
+                return(self.XY)
+                
+        
     
     @property
     def X(self):
