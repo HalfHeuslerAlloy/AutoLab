@@ -21,6 +21,7 @@ from multiprocessing import Process, Queue
 import pyvisa
 
 import Instruments as Inst
+import Utility as Util
 
 class Handler(ttk.Notebook):
     """
@@ -39,6 +40,7 @@ class Handler(ttk.Notebook):
         """
         Utilities Section
         """
+
         
         """
         Initial setup of GUI widgets and the general window position

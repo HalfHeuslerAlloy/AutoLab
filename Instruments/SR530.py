@@ -100,7 +100,7 @@ class SR530(Instrument):
         else:
             raise ValueError("Invalid 530 Time-constant Mode, expected an int-like of 1 or 2, got: {}".format(mode))
             
-    def getTC(self,mode=1):
+    def getTCons(self,mode=1):
         if mode==1 or mode==2:
             return(self.Query(("T ")+str(mode)))
         else:
@@ -365,6 +365,8 @@ class SR530(Instrument):
             else:
                 raise ValueError("XOffset out of Range! Current Sensitivity={0}, Requested offset={1}".format(fullsens,XOff))
     
+    
+    
     def YOffset (self, YOff=0.0):
         """
         Sets the offsets for the Y, Channel
@@ -494,6 +496,8 @@ class SR530(Instrument):
             self.Write("S "+str(int(display_option)))
         else:
             raise ValueError("Invalid Channel Display selection, expected an int between 0 and 5, got {}".format(display_option))
+    def getDisplay(self):
+        return(self.Query("S"))
 
     def reset (self):
         """
@@ -578,7 +582,7 @@ class SR530(Instrument):
                 #WARNING: IF YOUR TC IS THE MAX VALUE OF 100 S, THIS ROUTINE WILL TAKE ~5 MINS PER STEP!
                 #But if it is 100 s you either know what you're doing or need to think about your life...
                 
-                return(self.XY)
+            return(self.XY)
                 
         
     

@@ -7,7 +7,7 @@ Driver for the Oxford instruments 503 Temperature Controller
 """
 
 import re
-from Instruments.Instrument_Class import Instrument
+from Instruments.Instrument_class import Instrument
 import time
 import numpy as np
 

@@ -17,7 +17,7 @@ class Util(tk.Frame):
     #Name of utility so it can e refer to later as part of a dictionary
     name = "Graph"
     
-    def __init__(self, master):
+    def __init__(self, master, parent=None):
         
         super().__init__(master)
         

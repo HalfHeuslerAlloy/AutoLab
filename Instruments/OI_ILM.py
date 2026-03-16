@@ -9,7 +9,7 @@ Do anything other than Read channels and examine the status.
 Pages 37-42 of the ILM 200 series manual.
 """
 import re
-from Instruments.Instrument_Class import Instrument
+from Instruments.Instrument_class import Instrument
 import time
 import numpy as np
 
