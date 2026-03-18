@@ -53,6 +53,8 @@ class SR530(Instrument):
         if s[-2:] == r"\n":
             s = s[:-2]
         s = np.array([float(i) for i in s.split(",")])
+    def __del__(self):
+        self.VI.close()
         
     def setTC(self, TC, mode=1):
         """
