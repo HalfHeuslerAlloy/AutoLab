@@ -20,6 +20,7 @@ from .DSP_7265 import *
 from .DSP_7280 import *
 from .SR830 import *
 from .SR530 import *
+from .Princeton5210 import *
 
 # =============================================================================
 # KEITHLEY MODULES
