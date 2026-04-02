@@ -214,7 +214,7 @@ class Princeton5210(Instrument):
     def getHarm(self):
         return(self.Query("M"))
         
-    def FilterSlope(self, sl):
+    def setFilterSlope(self, sl):
         """
         Sets the slope of the output filters.
 

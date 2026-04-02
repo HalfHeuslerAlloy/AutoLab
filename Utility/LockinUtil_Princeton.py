@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Utility tab for configuring Olde SRS530 Lockins
-Created on Fri Mar  6 15:14:19 2026
+Created on Thu Apr  2 10:53:58 2026
 
 @author: csk42
+
+LockinUtil for the princeton 5210 lockin. Kind of quick and Dirty, mostly C'd and P'd from the SR530 util
 """
 
 import tkinter as tk
@@ -19,20 +20,19 @@ class Util(tk.Frame):
     name="Lockin"
     
     TCvalues=["1 ms","3 ms","10 ms","30 ms","100 ms",
-              "300 ms","1 s","3 s","10 s","30 s","100 s"]
+              "300 ms","1 s","3 s","10 s","30 s","100 s", "300 s", "1 Ks", "3 Ks"]
     
-    Sensvalues=["10 nV", "20 nV", "50 nV", "100 nV", "200 nV", "500 nV",
-                "1 uV", "2 uV", "5 uV","10 uV", "20 uV", "50 uV", "100 uV", "200 uV", "500 uV",
-                "1 mV", "2 mV", "5 mV","10 mV", "20 mV", "50 mV", "100 mV", "200 mV", "500 mV"]
+    Sensvalues=["100 nV", "300 nV", "1 uV", "3 uV",  "10 uV", "30 uV",  "100 uV", "300 uV",
+                "1 mV", "3 mV",  "10 mV", "30 mV",  "100 mV", "300 mV", "1 V", "3 V"]
     
     Off_and_Expo_Values=["Off","Offset X", "Offset Y", "Offset X and Y", 
                          "Offset and Expand X x10", "Offset and Expand Y x10", "Offset and Expand X and Y x10"]
     
-    NotchValues=["Off","Line filter", "Double-Line filter", "Both Linefilters"]
+    NotchValues=["Off", "Double-Line filter", "Line filter", "Both Linefilters"]
     
     Reserve_Values=["Low Noise", "Normal", "High Reserve"]
     
-    Slope_Values=["1 Hz", "10 Hz"]
+    Slope_Values=["6 dB/o", "12 dB/o"]
     
     def __init__(self, master,title="Lockin Options",addresses=[]):
 
@@ -101,7 +101,6 @@ class Util(tk.Frame):
         
         self.update()
         
-        
     def configure(self):
         rm=pyvisa.ResourceManager()
         address=self.Com.get()
@@ -165,7 +164,7 @@ class Util(tk.Frame):
                 
         #ACTUAL CONNECTING TO THE INSTRUMENT SECTION
         try:
-            lockin=Inst.SR530(rm,address)
+            lockin=Inst.Princeton5210(rm,address)
             for x in range(0,len(is_default)):
                 if is_default[x] == True:
                     pass# handles the not-updating
@@ -174,47 +173,39 @@ class Util(tk.Frame):
                 elif x==1:
                     lockin.setTC(str(TC_to_send))
                 elif x==2:
+                    print("splango")
                     if ApplyExpands == 0:
-                        lockin.XOffset()
-                        lockin.YOffset()
+                        lockin.XOffset(0, False)
+                        lockin.YOffset(0, False)
                         lockin.setExpand()#default options for these are to disable offsets so this makese it easy
                     else:
                         mod=ApplyExpands%3
                         dev=ApplyExpands//4 #lets not redo satans ELIF chain
-                        if mod == 1 or mod == 0:
-                            lockin.XOffset(X_OffToSend)
-                        if mod==2 or mod==0:#should work if mod=0 i.e offset X and Y
-                            lockin.YOffset(Y_OffToSend)
-                        if dev ==1:#apply expands now
-                            if mod==1:
-                                lockin.setExpand(True,False)
-                            elif mod==2:
-                                lockin.setExpand(False,True)
-                            elif mod==0:
-                                lockin.setExpand(True,True)
-            
+                        if dev==0:#offset but don't expand
+                            if mod == 1 or mod == 0:
+                                lockin.XOffset(X_OffToSend, False)
+                            if mod==2 or mod==0:#should work if mod=0 i.e offset X and Y
+                                lockin.YOffset(Y_OffToSend, False)
+                        elif dev ==1:#apply expands now
+                            if mod == 1 or mod == 0:
+                                lockin.XOffset(X_OffToSend, True)
+                            if mod==2 or mod==0:
+                                lockin.YOffset(Y_OffToSend, True)
                         
                 elif x==3:
-                    if LF_to_send ==0:
-                        lockin.setNotchFilters()
-                    elif LF_to_send ==1:
-                        lockin.setNotchFilters(True,False)
-                    elif LF_to_send == 2:
-                        lockin.setNotchFilters(False,True)
-                    elif LF_to_send ==3:
-                        lockin.setNotchFilters(True,True)
+                    lockin.setNotchFilters(str(LF_to_send))
                 elif x==4:
-                    lockin.setNoiseBW(str(Slope_to_Send))
+                    lockin.setFilterSlope(str(Slope_to_Send))
                 elif x==5:
                     lockin.setReserve(str(Reserve_to_Send))
                         
                 self.ApplyButton.configure(bg="green")
         except Exception as e:
             print(e)
-            print("Failed to configure SRS530 Lockin")
+            print("Failed to configure Princeton5210 Lockin")
             rm.close()#cleanup    
             return False
-    
+        
     def Export_MetaData(self):
         """
         Creates a Metadata Dictionary for the Lockin.
@@ -226,7 +217,7 @@ class Util(tk.Frame):
         """
         rm=pyvisa.ResourceManager()
         address=self.Com.get()
-        Lockin_Manager=Inst.SR530(rm,address)
+        Lockin_Manager=Inst.SR830(rm,address)
         #create Metadata Dictionary
         Metadata={}
         Metadata["Instrument"]="Lockin"
@@ -234,25 +225,18 @@ class Util(tk.Frame):
         Metadata["Name"]=self.NameEntry.get()
         Metadata["Sensitivity"]=self.Sensvalues[int(Lockin_Manager.getSens())]
         Metadata["Time_Constant"]=self.TCvalues[int(Lockin_Manager.getTCons())]
-        current_display=int(Lockin_Manager.getDisplay())
-        Lockin_Manager.setDisplay(1)
-        XOff=Lockin_Manager.Q1
-        YOff=Lockin_Manager.Q2
-        Lockin_Manager.setDisplay(current_display)
-        #reset the display to the initial value after Offsets have been read
-        Expands=Lockin_Manager.getExpands()
-        
+        XOff=Lockin_Manager.getXOff()
+        YOff=Lockin_Manager.getYOff()
         Phas=Lockin_Manager.getRefPhase()
-        if  XOff!=0.0:
+        if  XOff[0]!=0.0:
             Metadata["XOffset"]=XOff[0]
-        if YOff!=0.0:
+        if YOff[0]!=0.0:
             Metadata["YOffset"]=YOff[0]
         if Phas != 0:
             Metadata["PhaseOffset"]=Phas
-        if Expands[0]==1:
+        if XOff[1]==1:
             Metadata["XExpand"]="x10"
-        if Expands[1]==1:
+        if YOff[1]==1:
             Metadata["YExpand"]="x10"
         rm.close()#cleanup
         return(Metadata)
-            

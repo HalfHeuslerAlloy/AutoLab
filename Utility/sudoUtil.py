@@ -32,7 +32,6 @@ class Util(tk.Frame):
             rm=pyvisa.ResourceManager()
             self.addresses=rm.list_resources()
             rm.close()
-        self.addresses=["Example1", "example2"]
         self.addresses.insert(0, "GPIB Address")
         self.Comlabel=tk.Label(sudoTab,text="Visa Address")
         self.Comlabel.grid(column=0,row=0)
