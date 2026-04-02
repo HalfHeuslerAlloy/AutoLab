@@ -19,6 +19,7 @@ from .Dummy import *
 from .DSP_7265 import *
 from .DSP_7280 import *
 from .SR830 import *
+from .SR860 import *
 from .SR530 import *
 from .Princeton5210 import *
 
@@ -33,6 +34,7 @@ from .Keithley236 import*
 # =============================================================================
 # TEMPERATURE CONTROL MODULES
 # =============================================================================
+
 from .lakeshore350 import*
 from .lakeshore218 import *
 from .OI_503 import *
