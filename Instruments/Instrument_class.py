@@ -3,6 +3,10 @@
 Created on Mon Feb 17 11:35:57 2025
 Generic Class for Instruments. Generic instrument terms (Read/Write/Query) should be defined here so that code
 Errors can be processed easier.
+
+POssibly bad coding practice. I'm using the exceptions raised by the drivers as flow control but since its for errors anyway, 
+Speed isnt an issue.
+
 Note; This cements self.VI as the syntax for direct write to instruments.
 
 @author: eencsk
@@ -54,7 +58,11 @@ class Instrument(object):
                     raise Exception("Invalid COM Address. Expected an Int or a string beginning ASRL, got {}".format(channel))
             
     def __del__(self):
-        self.VI.close()
+        try:
+            self.VI.close()
+        except AttributeError:
+            pass #if connection is unsuccessful, program may try to delete the instrument object
+            #this raises an Attribute Error (No VI to close!) Catch this.
     
     def Write (self,message):
         """

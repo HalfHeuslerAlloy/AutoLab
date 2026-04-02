@@ -19,7 +19,7 @@ class Util(tk.Frame):
     #Name of utility so it can e refer to later as part of a dictionary
     name = "test"
     
-    def __init__(self, master,title="Test"):
+    def __init__(self, master,title="Test",parent=None):
         
         super().__init__(master)
         self.title=title

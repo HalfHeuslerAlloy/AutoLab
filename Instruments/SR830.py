@@ -438,7 +438,65 @@ class SR830 (Instrument):
 
         """
         return self.__chkFloatList(self.Query('OEXP?2'))
+     
+    def getAnalog(self, channel):
+        """
+        Gets the value of the voltage on one of the analog in ports on the lockin
+
+        Parameters
+        ----------
+        channel : Int(1-4)
+            The analog-in port to be queried
+            
+        Returns
+        -------
+        The value of the selected input in volts
+        """
+        if int(channel) in [1,2,3,4]:
+            return(self.__chkFloat(self.Query("OAUX? "+str(int(channel)))))
+        else:
+            raise ValueError("Invalid Aux-In channel for 830! Expected a number between 1-4, got {}".format(channel))
+
+    def setOutput(self, Voltage, port=1):
+        """
+        Sets the output on the analog outputs on the rear panel
+        for voltage control
+
+        Parameters
+        ----------
+        Voltage : float
+            Voltage to be output. Limits between pm 10.5
+        port : int, optional
+            Port to activate. Valid are 1-4 
+            The default is 1.
+        """
+        if abs(float(Voltage)) < 10.5:
+            if int(port) in ([1,2,3,4]):
+                self.Write("AUXV"+str(int(port))+","+(str(float(Voltage))))
+            else:
+                raise ValueError("Invalid 830 output port! Expected a number between 1-4, got {}".format(port))
+        else:
+            raise ValueError("Invalid 830 Output voltage! Expected a float between +/-10.5, got {}".format(Voltage))
+            
+    def getOutput(self, port=1):
+        """
+        Gets the output on the defined pin on the rear panel
+
+        Parameters
+        ----------
+        port : Int, optional
+            Port to query. The default is 1.
+
+        Returns
+        -------
+        The voltage on the channel in Volts
+        """
+        if int(port) in [1,2,3,4]:
+            self.Query("AUXV? "+str(int(port)))
         
+        else:
+            raise ValueError("Invalid 830 output port! Expected a number between 1-4, got {}".format(port))
+    
     @property
     def clear(self):
         #clears the Buffer

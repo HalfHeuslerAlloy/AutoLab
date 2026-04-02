@@ -113,8 +113,12 @@ class Window(tk.Frame):
         self.utilTabModules[self.FileUtiltab.name] = self.FileUtiltab
         #self.CreateFileUtilTab()
         
+        
         self.GraphUtilTab = Utility.GraphUtil.Util(self.UtilTabs)
         self.utilTabModules[self.GraphUtilTab.name] = self.GraphUtilTab
+        
+        # self.sudoTab=Utility.sudoUtil.Util(self.UtilTabs,parent=self)
+        # self.utilTabModules[self.sudoTab.name]=self.sudoTab
         #self.CreateGraphUtilTab()
         
         self.SetupUtilTabs(setupFilename)
