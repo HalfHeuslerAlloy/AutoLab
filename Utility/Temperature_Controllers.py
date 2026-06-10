@@ -198,6 +198,7 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
     LMon_add : VISA address for a LevelMeter.
 
     """
+    Start_Time=time.time()
     rm = pyvisa.ResourceManager()
     Abort = False
     IsRamping=False#Bool to tag if temperature is ramping
@@ -205,7 +206,7 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
     try:
         T_Con = Inst.OI_503(rm,TCon_add)
         if LMon_add != None:
-            L_Mon=Inst.OI_ILM(rm,LMon_add)
+            L_Mon=None#Inst.OI_ILM(rm,LMon_add)
         else:
             L_Mon=None
         print("Successfully Connected To Temperature Controller")
@@ -220,13 +221,17 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
     while Abort == False:
     
         Current_TCon_VTI=T_Con.getTempN("1")
+        #time.sleep(0.5)
         Current_TCon_Sample=T_Con.getTempN("2")
+        #time.sleep(0.5)
         
         Current_LMon=[]
         if L_Mon is not None:
             Current_LMon.append(L_Mon.getLevelN(1))
             Current_LMon.append(L_Mon.getLevelN(2))#query channels 1 and 2. If there is no Lmon, should return a blank list
-        Pipe.send([time.time(),Current_TCon_VTI,Current_TCon_Sample,*Current_LMon,IsRamping,IsStable])
+            Pipe.send([time.time()-Start_Time,Current_TCon_VTI,Current_TCon_Sample,*Current_LMon,IsRamping,IsStable])
+        else:
+            Pipe.send([time.time()-Start_Time,Current_TCon_VTI,Current_TCon_Sample,IsRamping,IsStable])
         #sends the current reading of the pipes to be read
         
         #time.sleep(0.25)
@@ -318,5 +323,5 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
                         #TODO: This is not good practice. Fix.
                     else:
                         print("Invalid String Command Seen IN Temp. Controller! Got{}".format(Param))
-                time.sleep(0.1)#allow buffer to clear before querying it again
+                time.sleep(1)#allow buffer to clear before querying it again
     return()

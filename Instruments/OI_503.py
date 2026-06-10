@@ -32,9 +32,44 @@ class OI_503(Instrument):
         self.VI.write_termination=self.VI.CR
         self.VI.read_termination=self.VI.CR #read/write termination
         
-        self.Write("C3") 
+        self.Query("C3") 
         #when initialising instrument, force Remote Enable.
         #if this causes issues, put into dedicated "Remote Enable" function
+        #EVERY command will force a response. Change all these to queries to throw responses into the VOID
+    
+    def Super_Query(self, command):
+        """
+        Using the Status-Byte, guarantee a response from the
+        OI503. The 4th bit (I.e [-5]) is the message ready bit
+        so monitor it, and only read when it is set.
+        Should hopefully mean that things are read correctly, 
+        but could be a runtime block.
+
+        Parameters
+        ----------
+        command : Str
+            Valid OI 503 Command
+
+        Returns
+        -------
+        The response, Hopefully from the correct query!
+
+        """
+        try:
+            Message_Ready=int(self.getSTB()[-5])
+            if Message_Ready:
+                self.VI.clear()#if there is a message, we dont want it
+        except IndexError:
+            Message_Ready=0#if there is nothing set on the stb, the value will be 0, so [-5] will fall over. Catch
+
+        self.Write(command)
+        while not Message_Ready:#waits for the output to be ready
+            try:
+                Message_Ready=int(self.getSTB()[-5])
+            except IndexError:
+                Message_Ready=0
+        return(self.Read()[1:])#returns the output of the command, with the command letter trimmed.
+        
     
     def __chkFloat(self, s):
         """
@@ -42,9 +77,14 @@ class OI_503(Instrument):
         Thanks to Nic Hunter
 
         """
+        
         if s[-2:] == r"\r":#\n for LineFeed, \r for carriage return
             s = s[:-2]
         return float(s)
+
+    
+    def close(self):
+        self.VI.close()
     
     def setRemote(self,C):
         """
@@ -66,7 +106,7 @@ class OI_503(Instrument):
         except ValueError:
             raise Exception("Remote Mode could not be parsed as Int, check input")
             return
-        self.Write("C"+str(int(C)))
+        self.Query("C"+str(int(C)))
         return
     
     def getTempN(self,N):
@@ -91,7 +131,8 @@ class OI_503(Instrument):
         except ValueError:
             raise Exception("Channel ID could not be cast as Int. Check inputs")
             return()
-        return(self.__chkFloat(self.Query("R"+str(N))))
+
+        return(self.__chkFloat(self.Super_Query("R"+str(N))))#Will return R[NUMBER]. Slice out R
     
     def getTempAll(self):
         """
@@ -102,11 +143,11 @@ class OI_503(Instrument):
         A tuple of 3 temperatures 
 
         """
-        One=self.__chkFloat(self.Query("R1"))
+        One=self.__chkFloat(self.Super_Query("R1"))
         time.sleep(0.01)#todo:Test this. Old OI kit locks up if you talk to it too fast
-        Two=self.__chkFloat(self.Query("R2"))
+        Two=self.__chkFloat(self.Super_Query("R2"))
         time.sleep(0.01)
-        Three=self.__chkFloat(self.Query("R3"))
+        Three=self.__chkFloat(self.Super_Query("R3"))
         return((One,Two,Three))
     
     def examine(self):
@@ -142,7 +183,7 @@ class OI_503(Instrument):
         0=Static PID
         1=Zone Table Lookup
         """
-        readback=self.Query("X")
+        readback=self.Super_Query("X")
         if readback[-2:]==r"\r":
             readback=readback[:-2]#trim TERM characters if present
         split_readback=re.split(r"\D",readback)#splits the incoming string along the non-numeric characters
@@ -174,7 +215,7 @@ class OI_503(Instrument):
         if intMode not in range (0,4):
             raise Exception("Heater Mode Expected to be an int between 0 and 3, got {}".format(Mode))
         else:
-            self.Write("A"+str(Mode))
+            self.Query("A"+str(Mode))
         return
     
     def setPIDMode(self,L):
@@ -201,7 +242,7 @@ class OI_503(Instrument):
         if intL not in range (0,2):
             raise Exception("Heater PID Mode Expected to be an int between 0 and 1, got {}".format(L))
         else:
-            self.Write("L"+str(L))
+            self.Query("L"+str(L))
         return
     
     def getTempSetpoint(self):
@@ -209,7 +250,7 @@ class OI_503(Instrument):
         Returns the value of the current temperature setpoint
 
         """
-        return(self.__chkFloat(self.Query("R0")))
+        return(self.__chkFloat(self.Super_Query("R0")))
     
     def setTempSetpoint(self,setpoint):
         """
@@ -237,7 +278,7 @@ class OI_503(Instrument):
             print("Invalid Setpoint, value must be positive")
             return
         else:
-            self.Write("T"+str(round(setpoint, 4)))#round to 4 DP. Assume this is as far as it goes
+            self.Query("T"+str(round(setpoint, 4)))#round to 4 DP. Assume this is as far as it goes
             return
         
     def ManOut(self,power):
@@ -264,11 +305,11 @@ class OI_503(Instrument):
             power=99.9
             #handle the case where a power of 100% is entered. You can't go over 99.9 for some reason.
         if power>99.9 or power <0:
-            self.Write("O0")
+            self.Query("O0")
             raise Exception("Invalid Power detected, Power should be between 0 and 99.9, got {}. Set power to 0 for saftey".format(power))
             return
         else:
-            self.Write("O"+str(round(power,1)))
+            self.Query("O"+str(round(power,1)))
             return
         
     def getHeaterPower(self):
@@ -276,7 +317,7 @@ class OI_503(Instrument):
         Returns the Heater power as a % of fullrange. Unlike the Lakeshore this works even when using PID controls
 
         """
-        return(self.__chkFloat(self.Query("R5")))
+        return(self.__chkFloat(self.Super_Query("R5")))
     
     def setGasFlow(self,flow):
         """
@@ -302,11 +343,11 @@ class OI_503(Instrument):
             flow=99.9
             #handle the case where a power of 100% is entered. You can't go over 99.9 for some reason.
         if flow>99.9 or flow <0:
-            self.Write("G0")
+            self.Query("G0")
             raise Exception("Invalid Gas Flow detected, Flow should be between 0 and 99.9, got {}. Set flow to 0 for saftey".format(flow))
             return
         else:
-            self.Write("G"+str(round(flow,1)))
+            self.Query("G"+str(round(flow,1)))
             return
     def getGasFlow(self):
         """
@@ -317,7 +358,7 @@ class OI_503(Instrument):
         the NV position as a float
 
         """
-        return(self.__chkFloat(self.Query("R7")))
+        return(self.__chkFloat(self.Super_Query("R7")))
         
     def setHeaterSensor(self, N):
         """
@@ -338,7 +379,7 @@ class OI_503(Instrument):
             raise Exception("Channel ID could not be cast as Int. Check inputs")
             return()
         
-        self.Write("H"+str(int(N)))
+        self.Query("H"+str(int(N)))
         return
     
     def setPID(self,P=None,I=None,D=None):
@@ -388,7 +429,7 @@ class OI_503(Instrument):
                     raise Exception("Invalid Values passed to setPID for the 503s. Saw P={0},I={1},D={2}".format(P,I,D))
                     #Neater Error handling
             if PIDList[0] != None:
-                self.Write("P"+str(round(PIDList[0],3)))
+                self.Query("P"+str(round(PIDList[0],3)))
                 time.sleep(0.1)
             else:
                 print("P Not changed on 503")
@@ -397,14 +438,14 @@ class OI_503(Instrument):
             elif abs(float(I)) >140:
                 raise ValueError("I out of Range for OI503, Expected a number between 0 and 140, got {}".format(I))
             else:
-                self.Write("I"+str(round(PIDList[1],1)))
+                self.Query("I"+str(round(PIDList[1],1)))
                 time.sleep(0.1)
             if D == None:
                 print("I not changed on 530")
             elif abs(float(D)) >273:
                 raise ValueError("I out of Range for OI503, Expected a number between 0 and 273, got {}".format(I))
             else:
-                self.Write("D"+str(round(PIDList[2],1)))
+                self.Query("D"+str(round(PIDList[2],1)))
                 time.sleep(0.1)
                 
         return()
@@ -418,8 +459,17 @@ class OI_503(Instrument):
         Array of Len3 in the order [P,I,D]
 
         """
-        P=self.__chkFloat(self.Query("R8"))
-        I=self.__chkFloat(self.Query("R9"))
-        D=self.__chkFloat(self.Query("R10"))
+        P=self.__chkFloat(self.Super_Query("R8"))
+        I=self.__chkFloat(self.Super_Query("R9"))
+        D=self.__chkFloat(self.Super_Query("R10"))
         #TODO; Test this to see if a sleep statement is needed
         return(np.array([P,I,D]))
+    
+    def allOff(self):
+        """
+        Turns off the heaters and sets the gas to 0 
+        """
+        
+        self.setOutputMode(0)
+        self.ManOut(0)
+        self.setGasFlow(0)

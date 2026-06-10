@@ -26,7 +26,8 @@ class Util(tk.Frame):
         master.add(sudoTab,text="Manual Control")
         
         try:
-            self.addresses=parent.address_list
+            self.addresses=list(parent.address_list)
+            #force list, otherwise the 0 insert value doesnt work
         except AttributeError:
             #if there is no address list, then make your own list
             rm=pyvisa.ResourceManager()

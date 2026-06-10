@@ -12,6 +12,7 @@ Note; This cements self.VI as the syntax for direct write to instruments.
 @author: eencsk
 """
 import inspect
+from pyvisa.errors import VisaIOError
 from pyvisa.constants import StopBits, Parity
 
 class Instrument(object):
@@ -35,6 +36,7 @@ class Instrument(object):
 
 
         """
+        self.rm=rm#hold the pointer to the RM in memory so that it can be called later
         
         if GPIB ==True:
             if type(channel) != type(" "):
@@ -63,6 +65,19 @@ class Instrument(object):
         except AttributeError:
             pass #if connection is unsuccessful, program may try to delete the instrument object
             #this raises an Attribute Error (No VI to close!) Catch this.
+    def List_Resources(self):
+        """
+        Bugfixing Code fragment to write out the List_Resources
+        At Call-time. Having strange errors and wonder if the bus
+        might be dropping out
+
+        Returns
+        -------
+        None.
+
+        """
+
+        print(self.rm.list_resources())
     
     def Write (self,message):
         """
@@ -78,23 +93,34 @@ class Instrument(object):
         None.
 
         """
-        try:
-            self.VI.write(message)
-            
-        except Exception as e:
-            exception_arg=e.args[0]
-            #contains the actual exception message. Its the only thing printed in the anaconda prompt otherwise
+        timeout=0#iterator. 
+        while timeout < 5:
             try:
-                frame=inspect.currentframe().f_back
-                #gets the caller of this write function. This should be your instrument module
-                trace=inspect.getframeinfo(frame)
-                module_name=trace.filename
-                #As the instruments are named accordingly, the filename should show up the correct name
-            finally:
-                del frame #done to prevent memory leaks due to reccurent frame references
+                self.VI.write(message)
+            
+            except VisaIOError as e:#if the bus is being flaky, this may trigger. attempt message 5 times until calling it
+                timeout+=1#increment timeout
+                if timeout==5:
+                    raise Exception (e)
                 
-            exception_message="Error occured Writing "+ message + " in "+module_name+": "+exception_arg
-            raise Exception(exception_message)
+            except Exception as e:
+                exception_arg=e.args[0]
+                #contains the actual exception message. Its the only thing printed in the anaconda prompt otherwise
+                try:
+                    frame=inspect.currentframe().f_back
+                    #gets the caller of this write function. This should be your instrument module
+                    trace=inspect.getframeinfo(frame)
+                    module_name=trace.filename
+                    #As the instruments are named accordingly, the filename should show up the correct name
+                finally:
+                    del frame #done to prevent memory leaks due to reccurent frame references
+                    
+                exception_message="Error occured Writing "+ message + " in "+module_name+": "+exception_arg
+                self.List_Resources()
+                break#if another error occurs, break the timeout loop.
+                raise Exception(exception_message)
+            else:
+                break #break the while loop if no error found
     
     def Query (self, message):
         """
@@ -110,25 +136,34 @@ class Instrument(object):
         The Response from the instrument
 
         """
-        try:
-            result=self.VI.query(message)
-            return (result)
-            
-            
-        except Exception as e:
-            exception_arg=e.args[0]
-            #contains the actual exception message. Its the only thing printed in the anaconda prompt otherwise
+        timeout=0
+        while timeout < 5:
             try:
-                frame=inspect.currentframe().f_back
-                #gets the caller of this write function. This should be your instrument module
-                trace=inspect.getframeinfo(frame)
-                module_name=trace.filename
-                #As the instruments are named accordingly, the filename should show up the correct name
-            finally:
-                del frame #done to prevent memory leaks due to reccurent frame references
+                result=self.VI.query(message)
+            
+            except VisaIOError as e:#if the bus is being flaky, this may trigger. attempt message 5 times until calling it
+                timeout+=1#increment timeout
+                if timeout==5:
+                    raise Exception (e)
                 
-            exception_message="Error occured Querying "+ message + " in "+module_name+": "+exception_arg
-            raise Exception(exception_message)
+                
+            except Exception as e:
+                exception_arg=e.args[0]
+                #contains the actual exception message. Its the only thing printed in the anaconda prompt otherwise
+                try:
+                    frame=inspect.currentframe().f_back
+                    #gets the caller of this write function. This should be your instrument module
+                    trace=inspect.getframeinfo(frame)
+                    module_name=trace.filename
+                    #As the instruments are named accordingly, the filename should show up the correct name
+                finally:
+                    del frame #done to prevent memory leaks due to reccurent frame references
+                    
+                exception_message="Error occured Querying "+ message + " in "+module_name+": "+exception_arg
+                self.List_Resources()
+                raise Exception(exception_message)
+            else:
+                return(result)
             
       
     def Read(self):
@@ -140,21 +175,67 @@ class Instrument(object):
         The read message
 
         """
-        try:
-            result=self.VI.read()
-            return(result)
-        
-        except Exception as e:
-            exception_arg=e.args[0]
-            #contains the actual exception message. Its the only thing printed in the anaconda prompt otherwise
+        timeout=0
+        while timeout < 5:
+            
             try:
-                frame=inspect.currentframe().f_back
-                #gets the caller of this write function. This should be your instrument module
-                trace=inspect.getframeinfo(frame)
-                module_name=trace.filename
-                #As the instruments are named accordingly, the filename should show up the correct name
-            finally:
-                del frame #done to prevent memory leaks due to reccurent frame references
-                
-            exception_message="Error occured Reading in "+module_name+": "+exception_arg
-            raise Exception(exception_message)
+                result=self.VI.read()
+            except VisaIOError as e:#if the bus is being flaky, this may trigger. attempt message 5 times until calling it
+                timeout+=1#increment timeout
+                if timeout==5:
+                    raise Exception (e)
+        
+            except Exception as e:
+                exception_arg=e.args[0]
+                #contains the actual exception message. Its the only thing printed in the anaconda prompt otherwise
+                try:
+                    frame=inspect.currentframe().f_back
+                    #gets the caller of this write function. This should be your instrument module
+                    trace=inspect.getframeinfo(frame)
+                    module_name=trace.filename
+                    #As the instruments are named accordingly, the filename should show up the correct name
+                finally:
+                    del frame #done to prevent memory leaks due to reccurent frame references
+                    
+                exception_message="Error occured Reading in "+module_name+": "+exception_arg
+                self.List_Resources()
+                raise Exception(exception_message)
+            else:
+                return(result)
+            
+    def getSTB(self):
+        """
+        Uses Pyvisa's inbuilt method to ping the status byte of the instrument
+
+        Returns
+        -------
+        The status byte as a string in binary
+
+        """
+        timeout=0
+        while timeout < 5:
+            try:
+                result=(format(self.VI.stb,"b"))
+            except VisaIOError as e:#if the bus is being flaky, this may trigger. attempt message 5 times until calling it
+                timeout+=1#increment timeout
+                print("Timeout Detected")
+                if timeout==5:
+                    raise Exception (e)
+            
+            except Exception as e:
+                exception_arg=e.args[0]
+                #contains the actual exception message. Its the only thing printed in the anaconda prompt otherwise
+                try:
+                    frame=inspect.currentframe().f_back
+                    #gets the caller of this write function. This should be your instrument module
+                    trace=inspect.getframeinfo(frame)
+                    module_name=trace.filename
+                    #As the instruments are named accordingly, the filename should show up the correct name
+                finally:
+                    del frame #done to prevent memory leaks due to reccurent frame references
+                    
+                exception_message="Error occured in getting StatusByte from "+module_name+": "+exception_arg
+                self.List_Resources()
+                raise Exception(exception_message)
+            else:
+                return(result)

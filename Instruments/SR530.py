@@ -323,7 +323,7 @@ class SR530(Instrument):
         Parameters
         ----------
         port : int
-            Port to be queried (1-5)
+            Port to be queried (1-6)
 
         Returns
         -------
@@ -331,10 +331,10 @@ class SR530(Instrument):
 
         """
         
-        if int(port) in ([1,2,3,4,5]):
+        if int(port) in ([1,2,3,4,5,6]):
             return(self.Query("X "+str(int(port))))
         else:
-            raise ValueError("Invalid 530 Get Analog in/out por! Expected 1-5, got {}".format(port))
+            raise ValueError("Invalid 530 Get Analog in/out por! Expected 1-6, got {}".format(port))
             
     def XOffset (self, XOff=0.0):
         """

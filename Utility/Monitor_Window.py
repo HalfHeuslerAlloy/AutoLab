@@ -238,11 +238,31 @@ class Mon_Win(tk.Frame):
         #VTI and sample readings are always needed, but would be nice to have a reading for other temperature elements
         #Create Dropdown and a Modular box to cycle through as needed. 
         #Default to Switch Heater, because its the most needed IMO
-        self.Modular_Selection=tk.StringVar(StatusFrame,self.Temperature_Keys[-1])
+        self.Modular_Selection=tk.StringVar(StatusFrame,self.Temperature_Keys[0])
         ModularSelector=tk.OptionMenu(StatusFrame,self.Modular_Selection,*self.Temperature_Keys)
         ModularSelector.grid(row=4,column=0)
         self.Modular_Readout=tk.Message(StatusFrame,font=100, relief = "raised",text="Selected Temperature")
         self.Modular_Readout.grid(row=5,column=0)
+# =============================================================================
+# BASED ON THE MODEL YOU INITIALISED THE METHOD IN, GRID/UNGRID THE APPROPRIATE ELEMENTS        
+# =============================================================================
+        NewModel=self.TC_Model.index(self.Model.get())
+        currentMode=self.Mode_Select.index(self.Mode.get())
+        if NewModel==0:#Lakeshore350
+            self.Gas_Entry.grid_remove()#uneeded GUI element
+            self.Gas_Label.grid_remove()
+            
+            self.range_Entry.grid()
+            if currentMode==0: #zone Mode, so ramp is now enabled
+                self.ramp_button.grid()
+                self.ramp_entry.grid()
+        elif NewModel==1:
+            self.ramp_button.grid_remove()
+            self.ramp_entry.grid_remove()
+            self.ramp_enable=False#again, explicitly set out of paranoia
+            self.range_Entry.grid_remove()
+            self.Gas_Label.grid()
+            self.Gas_Entry.grid()#show Gas slider.
         
 # =============================================================================
 # GUI IS NOW INITIALISED, START THE MONITORING. DOESNT UPDATE GRAPH UNTILL START IS PRESSED       
@@ -250,17 +270,32 @@ class Mon_Win(tk.Frame):
         
         try:
             self.Open_Pipes(default_addresses[0],TMon_Address=(default_addresses[1]))
+            print("Opened Pipes Successfully")
             self.IsMonitoring=True
             print("PIPE CONTENTS:")
             print(self.Temp_PipeRecv.recv())
+            self.Temp_PipeRecv.send("T; G")
+            while self.Temp_PipeRecv.poll():
+                print("Connection Successful. Current Setpoint is {}").format(self.Temp_PipeRecv.recv())
+                break
         except AttributeError:
             #if the program does not configure correctly, the generated Lakeshore object
             #will have no VI attribute to open or close. Catch this.
             print("Connection Error Detected!")
             self.StartButton.configure(command=self.Reconnect,text="Reconnect",bg="red")
             #change the start button to now attempt recconnection.
-
+        except IndexError:
+            #if only 1 address is supplied, default_adresses[1] will sqonk. Catch
+            self.Open_Pipes(default_addresses[0])
+            self.IsMonitoring=True
+            print("PIPE CONTENTS:")
+            print(self.Temp_PipeRecv.recv())
+            # self.Temp_PipeRecv.send("T; G")
+            # while self.Temp_PipeRecv.poll():
+            #     print("Connection Successful. Current Setpoint is {}").format(self.Temp_PipeRecv.recv())
+            #     break
         except Exception as e:
+            print("Error Attempting to Open Pipes!")
             print(e)
             
         
@@ -273,6 +308,7 @@ class Mon_Win(tk.Frame):
         Opens the MultiThreading, Create a Log File for Diagnostics and initialises. 
      
         """
+        print("Starting Temperature MultiThreading")
         self.Temp_PipeRecv, self.Temp_PipeSend = Pipe(duplex=True)
         Controller=self.Model.get()
         if Controller == "Lakeshore_350":
@@ -283,11 +319,6 @@ class Mon_Win(tk.Frame):
             raise Exception("Unknown Temperature Controller Model!")
             
         self.Control.start()
-
-        self.Temp_PipeRecv.send("T; G")
-        while self.Temp_PipeRecv.poll():
-            print("Connection Successful. Current Setpoint is {}").format(self.Temp_PipeRecv.recv())
-            break
         time.sleep(0.1)
         self.Temp_PipeRecv.send("HMD; S; Z")#initialise Heater control in Zone mode, to match W. gui.
         time.sleep(0.1)
@@ -310,7 +341,7 @@ class Mon_Win(tk.Frame):
             self.Temperature_Log_Writer.writerow(["Time","VTI Temperature","Sample_Temperature","1st Stage Temp","2nd Stage Temp","Magnet 1","Magnet 2", "He Pot", "Switch Heater"])
         elif Controller == "OI_503" :
             self.Temperature_Log_Writer.writerow(["Time","VTI Temperature","Sample_Temperature","He Level","N2 Level"])#TODO: Check that these are the correct channel Markers
-        
+
         
             
        
@@ -354,13 +385,11 @@ class Mon_Win(tk.Frame):
 
         """
         Start_T = time.time()
-        
         while(self.IsMonitoring==True):#TODO: Test 
             # Timeout if it spends too long reading the que, likely because is very full
             if time.time()-Start_T>5:
                 print("Timeout, Queue might be too large!")
                 break
-            
             #Check if there is something to recieve in the pipe
             #If there isnt, Exit the While loop. This is why this needs to be Called in UpdateWindow,
             #Otherwise it will just Stop.
@@ -424,12 +453,12 @@ class Mon_Win(tk.Frame):
         May want to make this more modular for other systems.
         
         """
-        self.VTI_Readout["text"]=str(self.current_Data[1])
-        self.Sample_Readout["text"]=str(self.current_Data[2])
+        #self.VTI_Readout["text"]=str(self.current_Data[1])
+        #self.Sample_Readout["text"]=str(self.current_Data[2])
         #NB; May want to make this more modular if we end up using this 
         modular_index=(self.Temperature_Keys.index(self.Modular_Selection.get()))+1
         #+1 to skip the time parameter in the pipe
-        self.Modular_Readout["text"]=str(self.current_Data[modular_index])
+        #self.Modular_Readout["text"]=str(self.current_Data[modular_index])
         
         
     def UpdateGraph(self):
@@ -460,8 +489,9 @@ class Mon_Win(tk.Frame):
             self.ax.relim()
             self.ax.autoscale()
         except Exception as e:
-            print(e)
             print("Error In Graph Update")
+            print(e)
+            
             self.IsMonitoring=False
             self.Temp_PipeRecv.send("STOP")
             self.Window.destroy()
