@@ -221,7 +221,7 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
     while Abort == False:
     
         Current_TCon_VTI=T_Con.getTempN("1")
-        #time.sleep(0.5)
+        time.sleep(0.25)
         Current_TCon_Sample=T_Con.getTempN("2")
         #time.sleep(0.5)
         

@@ -81,7 +81,7 @@ class IPS120(Instrument):
         elif self.ActivityStatus==2:
             self.Activity = "Ramp to Zero"
             
-        elif self.ActivityStatus==3:
+        elif self.ActivityStatus==4:
             self.Activity = "Clamped"
         else:
             self.Activity = "unknown"
