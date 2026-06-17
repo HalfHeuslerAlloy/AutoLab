@@ -453,12 +453,12 @@ class Mon_Win(tk.Frame):
         May want to make this more modular for other systems.
         
         """
-        #self.VTI_Readout["text"]=str(self.current_Data[1])
-        #self.Sample_Readout["text"]=str(self.current_Data[2])
+        self.VTI_Readout["text"]=str(self.current_Data[1])
+        self.Sample_Readout["text"]=str(self.current_Data[2])
         #NB; May want to make this more modular if we end up using this 
         modular_index=(self.Temperature_Keys.index(self.Modular_Selection.get()))+1
         #+1 to skip the time parameter in the pipe
-        #self.Modular_Readout["text"]=str(self.current_Data[modular_index])
+        self.Modular_Readout["text"]=str(self.current_Data[modular_index])
         
         
     def UpdateGraph(self):
@@ -469,7 +469,7 @@ class Mon_Win(tk.Frame):
         """
 
         try:
-            if len(self.Time_Data) <=10000:
+            if len(self.Time_Data) <=1000:
                 self.Time_Data.append(self.current_Data[0])
                 self.Temperature_Data.append(self.current_Data[1::])
                 
