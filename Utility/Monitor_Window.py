@@ -7,7 +7,6 @@ Class to manage the Temperature Monitoring Window.
 Developed for the green cryostat but should be adaptable
 
 TASKS:
-    See if Temperature Control can Monitor an OI503 (Will test isMonitoring==True at same time)
     See if We can disconnect and Reconnect to an Instrument
     See if we can Populate the GUI elements w. the "Read" Button.
 

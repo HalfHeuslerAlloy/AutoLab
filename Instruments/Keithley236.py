@@ -3,7 +3,7 @@
 Created on Tue Jul  8 15:27:09 2025
 
 @author: csk42
-Driver for the Keithley 236 SMU
+Driver for the Keithley 236 SMU (Hadouken!)
 """
 
 import re
@@ -177,12 +177,11 @@ class Keithley236(Instrument):
                     self.Write(("B{0},{1},{2}X").format(Bias,Source_Range,Delay))
                     return()
     
-    def data_Format(self, lines, items=4,form=1):
+    def get_Data(self, lines, items=4,form=2):
         """
-        Set the Format of data Returned from the K236
+        Set the Format of data Returned from the K236, and return the data
         As lines is the one most likely to change, (between sweep and DC), 
         Everything else is set to something I think will be useful. 
-        THINK this is your "Get Data" Function?
         
         Parameters
         ----------
@@ -217,7 +216,7 @@ class Keithley236(Instrument):
             lines=int(lines)
             items=int(items)
             form=int(form)
-            self.Query("G{},{},{}X".format(items,form,lines))
+            return(self.Query("G{},{},{}X".format(items,form,lines)))
             
     def set_Trigger(self,Origin=3,In=0,Out=0,End=1):
         """
@@ -293,23 +292,22 @@ class Keithley236(Instrument):
         else:
             self.Write("S{}X".format(int(Option)))
             
-    def set_sweep(self, sweep_list,delay=0,DPP=1):
+    def set_sweep(self, sweep_list,delay=100,DPP=1):
         """
         Programs a sweep from an array of levels 
         NB: Assumes Mode is already set and calculates ranges accordingly
         
         Uses the "Fixed Level" sweep option and appends the points
         to the list. This should allow you to create an arbitrary IV characteristics
-        TODO: Test that this works and doesnt flick the output all over the place.
-        Also test if we need a Time.Sleep between all Sweep points.
+        
 
         Parameters
         ----------
         sweep_list : Array-like
             List of datapoints to do sweep. Max 1000
         delay : Array-like of Ints or Int, optional
-            Delay before taking a measurement in ms. If an array must be the same Len as sweep_list,
-            which will then apply that point-wise. If Int, sets it for all points. The default is 0
+            Delay (in ms) before taking a measurement in ms. If an array must be the same Len as sweep_list,
+            which will then apply that point-wise. If Int, sets it for all points. The default is 100
         DPP : Int, optional
             Data-Per-Point. How many datapoints will be taken at each sweep step. Assumed constant throughout sweep The default is 1.
 
@@ -326,7 +324,7 @@ class Keithley236(Instrument):
         elif np.size(delay) != sweep_size:
             raise ValueError("Sweep and Delay Must be the same size if Arrays! Sweep_Size={}, Delay_size={}".format(sweep_size,np.size(delay)))
             
-        range_test=np.max(abs(sweep_list))#first find appropiate range  
+        range_test=np.max(abs(sweep_list))#first find appropiate range
         if self.Mode==1:
             if range_test < 110:#make sure voltages are in-range
                 range_test=divmod(log10(range_test),1)#gets appropriate power of 10
@@ -349,8 +347,9 @@ class Keithley236(Instrument):
 #             START ACTUALLY WRITING THE SWEEP
 # =============================================================================
         self.Write("Q0,{},{},{},{}X".format(sweep_list[0],Source_Range,delay[0],DPP))#create list.
-        for x in range(1,sweep_list.size()):
-            self.Write("Q6,{},{},{},{}X".format(sweep_list[0],Source_Range,delay[0],DPP))#append points to list. Unsure if we need X on every line here.
+        for x in range(1,sweep_list.size):
+            #time.sleep(0.1)
+            self.Write("Q6,{},{},{},{}X".format(sweep_list[x],Source_Range,delay[0],DPP))#append points to list. Unsure if we need X on every line here.
             
         
     def enable_Trigger(self,Enable=True):

@@ -298,7 +298,7 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
                         T_Con.setTempSetpoint(float(Param[2]))
                     elif re.search("PO",Param[0]):
                         T_Con.ManOut(float(Param[2]))
-                        Pipe.send(T_Con.readMout(1))
+                        Pipe.send(T_Con.getHeaterPower())
                     elif re.search("PID",Param[0]):
                         list_PID=Param[2].split(",")
                         #break up PID into a Len3 list. This is why you split by semicolon in the first case
