@@ -806,22 +806,37 @@ class Window(tk.Frame):
                 
                 fileExist = True
                 N = 0
+                step = 1
                 
                 enumFilename = filenamePath
                 
-                while(fileExist):
+                #binary search of lowest filename enumeration
+                for i in range(1000):
+                    if step<1:
+                        N += 0.5
+                        break
                     
-                    N += 1
-                    EnumStr = str(N).zfill(3)
+                    step *= 2
+                    
+                    EnumStr = str(int(N)).zfill(3)
                     enumFilename = filenamePath[:-4] +"_"+ EnumStr + filenamePath[-4:]
                     fileExist = os.path.isfile(enumFilename)
-                    if N>999:
-                        print("timeout finding Enumeration")
-                        return False
+                    
+                    if fileExist:
+                        N += step
+                        continue
+                    else:
+                        step /= 4
+                        N -= step
+                        continue
+                
+                if i == 999 or N > 1_500_000: #cap file limit at ~1million
+                    print("timeout finding Enumeration")
+                    return False
                 
                 filenamePath = enumFilename
                 
-                print("made file with number: {}".format(N))
+                print("made file with number: {}".format(int(N)))
                 self.file = open(filenamePath,"w")
                 self.file.seek(0)
                 self.file.truncate()
