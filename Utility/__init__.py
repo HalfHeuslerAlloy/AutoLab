@@ -32,6 +32,8 @@ from .Temp_Con_Booter import*
 from .Monitor_Window import*
 
 from .Preview_plot import*
+from .Dynamic_Ramps import*
+
 
 from .sudoUtil import *
 

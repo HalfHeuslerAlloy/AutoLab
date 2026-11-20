@@ -68,7 +68,9 @@ class OI_503(Instrument):
                 Message_Ready=int(self.getSTB()[-5])
             except IndexError:
                 Message_Ready=0
-        return(self.Read()[1:])#returns the output of the command, with the command letter trimmed.
+        result=self.Read()[1:]#returns the output of the command, with the command letter trimmed.
+        self.getSTB()#seems to be more stable if the STB is queried after each command? Weird.
+        return(result)
         
     
     def __chkFloat(self, s):

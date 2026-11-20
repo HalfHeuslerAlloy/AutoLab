@@ -80,14 +80,13 @@ class Handler(ttk.Notebook):
         self.SkipButton = tk.Button(self.MainFrame,text="Skip",command=self.Skip)
         self.SkipButton.pack()
         
-        data=[np.linspace(0,10,10),np.sin(np.linspace(0,10,10))]
-        self.preveiw=Utility.Preview_plot(self.MainFrame,data)
-        self.preveiw.TK_widget.pack(side="right")
+        # data=[np.linspace(0,10,10),np.sin(np.linspace(0,10,10))]
+        # self.preveiw=Utility.Preview_plot(self.MainFrame,data)
+        # self.preveiw.TK_widget.pack(side="right")
         
-        self.TestDict={
-            "a":172,
-            "b":2188,
-            "this its the third element":"aaaaaaaaaaaaaaaaaaaaaaaa"}
+        self.Ramp_Table=Utility.Dynamic_Ramps(self.MainFrame)
+        self.Ramp_Table.RampFrame.pack()
+
 
 
     def Start(self,Pipe):

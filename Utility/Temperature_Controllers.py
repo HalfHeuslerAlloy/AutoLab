@@ -221,10 +221,9 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
     while Abort == False:
     
         Current_TCon_VTI=T_Con.getTempN("1")
-        time.sleep(0.25)
+        time.sleep(0.5)
         Current_TCon_Sample=T_Con.getTempN("2")
-        #time.sleep(0.5)
-        
+        time.sleep(0.5)
         Current_LMon=[]
         if L_Mon is not None:
             Current_LMon.append(L_Mon.getLevelN(1))
@@ -234,13 +233,11 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
             Pipe.send([time.time()-Start_Time,Current_TCon_VTI,Current_TCon_Sample,IsRamping,IsStable])
         #sends the current reading of the pipes to be read
         
-        #time.sleep(0.25)
 # =============================================================================
 #         PIPE NOW CHECKS FOR INPUT
 # =============================================================================
         if Pipe.poll():# If this isnt there, Pipe will Wait for input and do nothing
             Comm = Pipe.recv()
-
             if Comm=="STOP":
                 Abort=True
             elif Comm =="ALLOFF":
@@ -323,5 +320,9 @@ def OI_503_Controller(Pipe,TCon_add, LMon_add=None):
                         #TODO: This is not good practice. Fix.
                     else:
                         print("Invalid String Command Seen IN Temp. Controller! Got{}".format(Param))
+                print("Data Sent:")
+                print([time.time()-Start_Time,Current_TCon_VTI,Current_TCon_Sample,IsRamping,IsStable])
+                print("Comms Received:")
+                print(Comm)
                 time.sleep(1)#allow buffer to clear before querying it again
     return()

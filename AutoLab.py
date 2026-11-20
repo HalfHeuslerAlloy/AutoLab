@@ -317,6 +317,9 @@ class Window(tk.Frame):
         self.rescriptButton=tk.Button(menuFrame,text="Refresh Scripts",command=self.refresh_Workers)
         self.rescriptButton.grid(column=1,row=0,padx=20)#button to re-fresh the loaded script
         
+        self.SaveButton=tk.Button(menuFrame,text="Manual Save", command=self.SaveToFile)
+        self.SaveButton.grid(column=2,row=0,padx=20)#button to manually save a file
+        
     
     def SetupUtilTabs(self,SetupFile):
         
@@ -855,7 +858,30 @@ class Window(tk.Frame):
         
     
     def SaveToFile(self):
-        pass
+        """
+        Uses the self.Data attribute in the graph to generate a savefile manually
+        """
+        print("Making Save File")
+        filename = self.filenameInput.get()
+        self.CreateFile(filename)
+        try:
+            save_Header=str(self.MeasHandler.Header_List)
+            save_Header.replace(", ",self.delimiterOption)
+            save_Header=save_Header[1:-1]+"\n"
+            self.file.write(save_Header)#attempt to write a reasonable header
+        except AttributeError():#hande the case where there is no Header_list
+            pass
+        for row in self.Data:
+            save_Data = str(row)
+            save_Data = save_Data.replace(", ",self.delimiterOption)
+            save_Data = save_Data[1:-1]+"\n" #removes brackets on either end and ameks new line
+        
+            #write Data to string
+            self.file.write( str(save_Data) )
+            
+        print("Manual Save Completed")
+        self.CloseSaveFile()
+        
     
     def CloseSaveFile(self):
         """Closes Save file
